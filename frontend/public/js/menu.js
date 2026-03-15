@@ -753,15 +753,48 @@ const MenuPage = (() => {
       App.toast('Укажите от 1 до 21 блюда в неделю', 'error'); return;
     }
 
+    const payload = { use_meal_slots: useMealSlots, days, meals };
+    if (!useMealSlots) payload.recipes_per_week = recipesPerWeek;
+
     const btn = document.querySelector('#modal-auto-fill .btn-primary');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Подбираю...'; }
 
     try {
-      const menu = await API.createMenu({ title, weeks });
+      let menu;
+      try {
+        menu = await API.createMenu({ title, weeks });
+      } catch (createErr) {
+        const msg = String(createErr?.message || '');
+        const activeMenuExists = msg.includes('Уже есть активное меню') || msg.toLowerCase().includes('active menu');
+
+        if (!activeMenuExists) throw createErr;
+
+        // Fallback: if active menu already exists and is empty, auto-fill it instead.
+        const existing = await API.getActiveMenu().catch(() => null);
+        if (existing && Array.isArray(existing.items) && existing.items.length === 0) {
+          const result = await API.autoFillMenu(existing.id, payload);
+          const added = result?.added || 0;
+          closeAutoFill();
+          currentWeek = 1;
+          await load();
+          App.toast(
+            added > 0
+              ? `Заполнил текущее активное меню: добавлено ${added} блюд`
+              : 'Текущее активное меню найдено, но блюда не добавлены',
+            added > 0 ? 'success' : 'info'
+          );
+          return;
+        }
+
+        closeAutoFill();
+        currentWeek = 1;
+        await load();
+        App.toast('Уже есть активное меню. Закройте текущее меню или очистите его перед авто-подбором.', 'error');
+        return;
+      }
+
       let added = 0;
       try {
-        const payload = { use_meal_slots: useMealSlots, days, meals };
-        if (!useMealSlots) payload.recipes_per_week = recipesPerWeek;
         const result = await API.autoFillMenu(menu.id, payload);
         added = result.added || 0;
       } catch (fillErr) {
