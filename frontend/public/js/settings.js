@@ -2,6 +2,25 @@
  * Settings page for warehouse matching aliases.
  */
 const SettingsPage = (() => {
+  const QUICK_ACTION_CONFIRM_SKIP_KEY = 'menu.quickActions.skipConfirm';
+
+  function getSkipQuickActionConfirm() {
+    try {
+      return localStorage.getItem(QUICK_ACTION_CONFIRM_SKIP_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  function setSkipQuickActionConfirm(skip) {
+    try {
+      if (skip) localStorage.setItem(QUICK_ACTION_CONFIRM_SKIP_KEY, '1');
+      else localStorage.removeItem(QUICK_ACTION_CONFIRM_SKIP_KEY);
+    } catch {
+      // ignore localStorage errors
+    }
+  }
+
   async function load() {
     const content = document.getElementById('settings-content');
     content.innerHTML = '<div class="spinner"></div>';
@@ -14,6 +33,7 @@ const SettingsPage = (() => {
 
       const productText = mapToLines(productRes.aliases || {});
       const phraseText = mapToLines(phraseRes.aliases || {});
+      const skipQuickConfirm = getSkipQuickActionConfirm();
 
       content.innerHTML = `
         <div class="shopping-list-block" style="max-width:900px">
@@ -24,6 +44,12 @@ const SettingsPage = (() => {
           <h3 style="margin:20px 0 12px">Фразовые алиасы</h3>
           <p class="text-muted" style="margin-bottom:10px">Используйте для двух слов и выражений.</p>
           <textarea id="settings-phrase-aliases" class="form-control" rows="8" placeholder="болгарский перец=перец\nсладкий перец=перец">${escapeHtml(phraseText)}</textarea>
+
+          <h3 style="margin:24px 0 10px">Поведение меню</h3>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px">
+            <input id="settings-skip-quick-confirm" type="checkbox" ${skipQuickConfirm ? 'checked' : ''} onchange="SettingsPage.toggleQuickConfirmSkip(this.checked)" />
+            Не спрашивать подтверждение для быстрых действий в слотах меню
+          </label>
 
           <div style="display:flex;gap:10px;margin-top:16px">
             <button class="btn btn-primary" onclick="SettingsPage.save()">Сохранить</button>
@@ -80,6 +106,10 @@ const SettingsPage = (() => {
     }
   }
 
-  return { load, save };
-})();
+  function toggleQuickConfirmSkip(checked) {
+    setSkipQuickActionConfirm(!!checked);
+    App.toast(checked ? 'Подтверждение быстрых действий отключено' : 'Подтверждение быстрых действий включено', 'success');
+  }
 
+  return { load, save, toggleQuickConfirmSkip };
+})();

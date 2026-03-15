@@ -32,6 +32,9 @@ describe('MenuPage', () => {
     setGlobal('API', {
       getActiveMenu: vi.fn(),
       listRecipes: vi.fn(),
+      listPrepared: vi.fn().mockResolvedValue([]),
+      listStock: vi.fn().mockResolvedValue([]),
+      listMembers: vi.fn().mockResolvedValue([]),
       addMenuItem: vi.fn(),
       updateMenuItem: vi.fn(),
       removeMenuItem: vi.fn(),

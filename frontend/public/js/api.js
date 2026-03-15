@@ -64,9 +64,11 @@ const API = (() => {
     getMenu:          (id)          => request('GET',  `/menus/${id}`),
     createMenu:       (data)        => request('POST', '/menus/', data),
     closeMenu:        (id)          => request('POST', `/menus/${id}/close`),
+    autoFillMenu:     (id, data)    => request('POST', `/menus/${id}/auto-fill`, data),
     addMenuItem:      (id, data)    => request('POST', `/menus/${id}/items`, data),
     updateMenuItem:   (mid, iid, d) => request('PATCH',  `/menus/${mid}/items/${iid}`, d),
     removeMenuItem:   (mid, iid)    => request('DELETE', `/menus/${mid}/items/${iid}`),
+    setItemAssignments: (mid, iid, assignments) => request('PUT', `/menus/${mid}/items/${iid}/assignments`, assignments),
     getShoppingList:  (id)          => request('GET',  `/menus/${id}/shopping-list`),
 
     // Warehouse – stock items
