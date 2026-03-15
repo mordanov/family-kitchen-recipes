@@ -418,28 +418,36 @@ const MenuPage = (() => {
         </div>
       </div>` : '';
 
-    const listHtml = allRecipes.map(r => `
-      <div class="recipe-picker-item" onclick="MenuPage.addItem(${r.id})">
-        <div style="font-size:24px">${getEmoji(r.cooking_method)}</div>
-        <div>
-          <div class="title">${r.title}</div>
-          <div class="meta">${App.cookingMethodLabel(r.cooking_method)} · ${r.servings} порц.${r.kbju_calculated ? ' · ' + r.calories?.toFixed(0) + ' ккал' : ''}</div>
+    const recipeSelect = `
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group" style="flex:1;min-width:240px;margin-bottom:0">
+          <label class="form-label">Общее блюдо для всей семьи</label>
+          <select class="form-control" id="add-item-recipe-select">
+            <option value="">— выберите рецепт —</option>
+            ${allRecipes.map(r => `<option value="${r.id}">${r.title}</option>`).join('')}
+          </select>
         </div>
-        <div style="margin-left:auto;color:var(--c-primary);font-weight:800;font-size:18px">+</div>
-      </div>`).join('');
+        <button class="btn btn-primary" onclick="MenuPage.addSelectedRecipe()">+ Добавить блюдо</button>
+        ${allMembers.length ? `<button class="btn btn-sm" onclick="MenuPage.addItemNoRecipe()" style="font-size:12px">+ Добавить только назначения выше</button>` : ''}
+      </div>`;
 
     return `
       <div class="add-recipe-panel">
         <h4>➕ Добавить блюдо в меню (неделя ${currentWeek})</h4>
         ${mealSelector}
         ${memberSection}
-        <div style="margin-bottom:8px;display:flex;gap:8px;align-items:center">
-          <span style="font-size:13px;color:var(--c-text-muted)">Общее блюдо для всей семьи:</span>
-          ${allMembers.length ? `<button class="btn btn-sm" onclick="MenuPage.addItemNoRecipe()" style="font-size:12px">+ Добавить только назначения выше</button>` : ''}
-        </div>
-        <input type="text" class="search-input" placeholder="🔍 Фильтр рецептов..." oninput="MenuPage.filterPicker(this.value)" style="margin-bottom:12px"/>
-        <div class="recipe-picker-list" id="recipe-picker-list">${listHtml}</div>
+        ${recipeSelect}
       </div>`;
+  }
+
+  async function addSelectedRecipe() {
+    const selectEl = document.getElementById('add-item-recipe-select');
+    const recipeId = parseInt(selectEl?.value || '', 10);
+    if (!recipeId) {
+      App.toast('Выберите рецепт из списка', 'error');
+      return;
+    }
+    await addItem(recipeId);
   }
 
   function renderMemberAssignmentRows() {
@@ -816,6 +824,6 @@ const MenuPage = (() => {
     openShoppingList, openCreate, closeCreate, createMenu,
     openAutoFill, closeAutoFill, createAutoMenu, toggleMealSlotsOptions,
     filterPicker, setAddDay, setAddMeal, setMemberAssignment,
-    makeSameForAll, makeDifferentForAll,
+    makeSameForAll, makeDifferentForAll, addSelectedRecipe,
   };
 })();
