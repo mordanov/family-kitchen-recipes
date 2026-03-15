@@ -132,6 +132,38 @@ const ShoppingPage = (() => {
  * History page – all menus (closed and active)
  */
 const HistoryPage = (() => {
+  const DAY_LABELS = { 1: 'Пн', 2: 'Вт', 3: 'Ср', 4: 'Чт', 5: 'Пт', 6: 'Сб', 7: 'Вс' };
+
+  function fmt(v) {
+    return Number(v || 0).toFixed(0);
+  }
+
+  function renderKbjuTotal(summary) {
+    const t = summary?.total;
+    if (!t) return '<span style="color:var(--c-text-muted)">КБЖУ: нет данных</span>';
+    return `
+      <span class="badge" style="background:#FFF0E8;color:var(--c-primary)">⚡ ${fmt(t.calories)} ккал</span>
+      <span class="badge" style="background:#EAF7FF;color:#2B5A9A">Б ${fmt(t.proteins)}</span>
+      <span class="badge" style="background:#FFF7E8;color:#9A6A1F">Ж ${fmt(t.fats)}</span>
+      <span class="badge" style="background:#EEFBEA;color:#2D7A2D">У ${fmt(t.carbs)}</span>`;
+  }
+
+  function renderKbjuByDay(summary) {
+    const days = summary?.by_day || [];
+    if (!days.length) return '<span style="color:var(--c-text-muted)">По дням: нет данных</span>';
+    return days
+      .map(d => `<span class="badge" style="background:var(--c-surface2);color:var(--c-text-muted)">${DAY_LABELS[d.day_of_week] || 'Без дня'}: ${fmt(d.calories)} ккал</span>`)
+      .join('');
+  }
+
+  function renderKbjuByMember(summary) {
+    const members = summary?.by_member || [];
+    if (!members.length) return '<span style="color:var(--c-text-muted)">По членам семьи: нет данных</span>';
+    return members
+      .map(m => `<span class="badge" style="background:${(m.member_color || '#999')}20;color:${m.member_color || '#555'};border:1px solid ${m.member_color || '#999'}40">${m.member_name}: ${fmt(m.calories)} ккал</span>`)
+      .join('');
+  }
+
   async function load() {
     const content = document.getElementById('history-content');
     content.innerHTML = '<div class="spinner"></div>';
@@ -163,6 +195,10 @@ const HistoryPage = (() => {
       ? `<span class="badge" style="background:#e8e8ef;color:#6B6B80">Закрыто</span>`
       : `<span class="badge" style="background:#E8FFF2;color:#2ECC71">● Активное</span>`;
 
+    const kbjuTotal = renderKbjuTotal(m.kbju_summary);
+    const kbjuByDay = renderKbjuByDay(m.kbju_summary);
+    const kbjuByMember = renderKbjuByMember(m.kbju_summary);
+
     return `
       <div class="history-card ${isClosed ? 'closed' : ''}" onclick="HistoryPage.openMenu(${m.id})">
         <div style="font-size:36px">${isClosed ? '📕' : '📖'}</div>
@@ -173,6 +209,9 @@ const HistoryPage = (() => {
             · Создано: ${App.formatDate(m.created_at)}
             ${m.closed_at ? ' · Закрыто: ' + App.formatDate(m.closed_at) : ''}
           </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${kbjuTotal}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${kbjuByDay}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${kbjuByMember}</div>
           <div class="progress-bar" style="margin-top:8px">
             <div class="progress-fill" style="width:${pct}%"></div>
           </div>
@@ -192,6 +231,10 @@ const HistoryPage = (() => {
   function showMenuDetail(menu) {
     const total = menu.items.length;
     const cooked = menu.items.filter(i => i.is_cooked).length;
+
+    const kbjuTotal = renderKbjuTotal(menu.kbju_summary);
+    const kbjuByDay = renderKbjuByDay(menu.kbju_summary);
+    const kbjuByMember = renderKbjuByMember(menu.kbju_summary);
 
     const byWeek = {};
     for (let w = 1; w <= menu.weeks; w++) byWeek[w] = menu.items.filter(i => i.week_number === w);
@@ -224,6 +267,12 @@ const HistoryPage = (() => {
             ${menu.weeks} нед. · Создано: ${App.formatDate(menu.created_at)} · 
             Приготовлено: ${cooked}/${total}
           </p>
+          <div class="shopping-list-block" style="margin-bottom:16px">
+            <h4 style="margin-bottom:8px">КБЖУ меню</h4>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${kbjuTotal}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${kbjuByDay}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">${kbjuByMember}</div>
+          </div>
           ${weeksHtml || '<p style="color:var(--c-text-muted)">В меню нет блюд</p>'}
         </div>
       </div>`;

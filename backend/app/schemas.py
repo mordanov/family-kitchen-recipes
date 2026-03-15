@@ -108,6 +108,37 @@ class MenuItemOut(BaseModel):
         from_attributes = True
 
 
+class MenuKbjuTotals(BaseModel):
+    calories: float = 0.0
+    proteins: float = 0.0
+    fats: float = 0.0
+    carbs: float = 0.0
+
+
+class MenuKbjuByDay(BaseModel):
+    day_of_week: Optional[int] = None
+    calories: float = 0.0
+    proteins: float = 0.0
+    fats: float = 0.0
+    carbs: float = 0.0
+
+
+class MenuKbjuByMember(BaseModel):
+    member_id: int
+    member_name: str
+    member_color: Optional[str] = None
+    calories: float = 0.0
+    proteins: float = 0.0
+    fats: float = 0.0
+    carbs: float = 0.0
+
+
+class MenuKbjuSummary(BaseModel):
+    total: MenuKbjuTotals = MenuKbjuTotals()
+    by_day: List[MenuKbjuByDay] = []
+    by_member: List[MenuKbjuByMember] = []
+
+
 class MenuCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     weeks: int = Field(default=1, ge=1, le=4)
@@ -121,6 +152,7 @@ class MenuOut(BaseModel):
     created_at: datetime
     closed_at: Optional[datetime] = None
     items: List[MenuItemOut] = []
+    kbju_summary: Optional[MenuKbjuSummary] = None
 
     class Config:
         from_attributes = True

@@ -1,9 +1,10 @@
 import pytest
 from fastapi import HTTPException
+from sqlalchemy import select
 
-from app.api.menus import add_menu_item, create_menu, get_shopping_list
-from app.models import CookingMethod, Menu, MenuItem, MenuStatus, Recipe, StockItem, PreparedDish, AppSettings
-from app.schemas import MenuCreate, MenuItemCreate
+from app.api.menus import add_menu_item, create_menu, get_shopping_list, auto_fill_menu, get_menu, list_menus
+from app.models import CookingMethod, Menu, MenuItem, MenuItemMember, MenuStatus, Recipe, StockItem, PreparedDish, AppSettings, FamilyMember, DietModel, Gender
+from app.schemas import MenuCreate, MenuItemCreate, AutoFillRequest
 
 
 @pytest.mark.asyncio
@@ -212,3 +213,167 @@ async def test_get_shopping_list_applies_custom_aliases_from_settings(session):
 
     assert "цуккини 2 шт" in shopping["in_stock_list"]
     assert "чеснок 2 зубчика" in shopping["to_buy_list"]
+
+
+@pytest.mark.asyncio
+async def test_auto_fill_meal_slots_reuses_recipes_to_fill_all_days(session):
+    menu = Menu(title="Авто меню", weeks=1, status=MenuStatus.active)
+    session.add(menu)
+    session.add_all([
+        Recipe(title="Рецепт 1", ingredients="a", shopping_list="a", cooking_method=CookingMethod.boiling, servings=2),
+        Recipe(title="Рецепт 2", ingredients="b", shopping_list="b", cooking_method=CookingMethod.boiling, servings=2),
+        Recipe(title="Рецепт 3", ingredients="c", shopping_list="c", cooking_method=CookingMethod.boiling, servings=2),
+        Recipe(title="Рецепт 4", ingredients="d", shopping_list="d", cooking_method=CookingMethod.boiling, servings=2),
+    ])
+    await session.commit()
+    await session.refresh(menu)
+
+    result = await auto_fill_menu(
+        menu_id=menu.id,
+        data=AutoFillRequest(use_meal_slots=True, days=[1, 2, 3, 4, 5, 6, 7], meals=["breakfast"]),
+        db=session,
+        _=None,
+    )
+
+    assert result["added"] == 7
+    items_result = await session.execute(select(MenuItem).where(MenuItem.menu_id == menu.id))
+    filled_days = sorted(item.day_of_week for item in items_result.scalars().all())
+    assert filled_days == [1, 2, 3, 4, 5, 6, 7]
+
+
+@pytest.mark.asyncio
+async def test_auto_fill_meal_slots_with_members_reuses_recipes_when_unique_pool_ends(session):
+    menu = Menu(title="Семейное авто меню", weeks=1, status=MenuStatus.active)
+    member = FamilyMember(
+        name="Алиса",
+        weight=55.0,
+        gender=Gender.female,
+        diet_model=DietModel.weight_maintain,
+        color="#4ECDC4",
+    )
+    recipes = [
+        Recipe(title="Сырники", ingredients="a", shopping_list="a", cooking_method=CookingMethod.frying, servings=2),
+        Recipe(title="Каша", ingredients="b", shopping_list="b", cooking_method=CookingMethod.boiling, servings=2),
+    ]
+    session.add_all([menu, member, *recipes])
+    await session.commit()
+    await session.refresh(menu)
+    await session.refresh(member)
+
+    member.preferred_recipes.extend(recipes)
+    await session.commit()
+
+    result = await auto_fill_menu(
+        menu_id=menu.id,
+        data=AutoFillRequest(use_meal_slots=True, days=[1, 2, 3, 4, 5, 6, 7], meals=["breakfast"]),
+        db=session,
+        _=None,
+    )
+
+    assert result["added"] == 7
+    items_result = await session.execute(select(MenuItem).where(MenuItem.menu_id == menu.id))
+    filled_days = sorted(item.day_of_week for item in items_result.scalars().all())
+    assert filled_days == [1, 2, 3, 4, 5, 6, 7]
+
+
+@pytest.mark.asyncio
+async def test_get_menu_includes_kbju_summary_total_and_by_day(session):
+    menu = Menu(title="КБЖУ меню", weeks=1, status=MenuStatus.active)
+    recipe_a = Recipe(
+        title="Омлет",
+        ingredients="a",
+        shopping_list="a",
+        cooking_method=CookingMethod.frying,
+        servings=2,
+        calories=200,
+        proteins=10,
+        fats=12,
+        carbs=4,
+        kbju_calculated=True,
+    )
+    recipe_b = Recipe(
+        title="Суп",
+        ingredients="b",
+        shopping_list="b",
+        cooking_method=CookingMethod.boiling,
+        servings=2,
+        calories=300,
+        proteins=20,
+        fats=10,
+        carbs=25,
+        kbju_calculated=True,
+    )
+    session.add_all([menu, recipe_a, recipe_b])
+    await session.commit()
+    await session.refresh(menu)
+    await session.refresh(recipe_a)
+    await session.refresh(recipe_b)
+
+    session.add_all([
+        MenuItem(menu_id=menu.id, recipe_id=recipe_a.id, position=0, week_number=1, day_of_week=1, meal_type="breakfast"),
+        MenuItem(menu_id=menu.id, recipe_id=recipe_b.id, position=1, week_number=1, day_of_week=2, meal_type="lunch"),
+    ])
+    await session.commit()
+
+    out = await get_menu(menu_id=menu.id, db=session, _=None)
+
+    assert out.kbju_summary is not None
+    assert out.kbju_summary.total.calories == 500
+    assert out.kbju_summary.total.proteins == 30
+    assert out.kbju_summary.total.fats == 22
+    assert out.kbju_summary.total.carbs == 29
+
+    by_day = {d.day_of_week: d for d in out.kbju_summary.by_day}
+    assert by_day[1].calories == 200
+    assert by_day[2].calories == 300
+
+
+@pytest.mark.asyncio
+async def test_list_menus_includes_kbju_by_member_from_assignments(session):
+    menu = Menu(title="Семья КБЖУ", weeks=1, status=MenuStatus.active)
+    member = FamilyMember(
+        name="Алиса",
+        weight=55.0,
+        gender=Gender.female,
+        diet_model=DietModel.weight_maintain,
+        color="#4ECDC4",
+    )
+    recipe = Recipe(
+        title="Сырники",
+        ingredients="a",
+        shopping_list="a",
+        cooking_method=CookingMethod.frying,
+        servings=2,
+        calories=420,
+        proteins=18,
+        fats=20,
+        carbs=40,
+        kbju_calculated=True,
+    )
+    session.add_all([menu, member, recipe])
+    await session.commit()
+    await session.refresh(menu)
+    await session.refresh(member)
+    await session.refresh(recipe)
+
+    slot = MenuItem(
+        menu_id=menu.id,
+        recipe_id=None,
+        position=0,
+        week_number=1,
+        day_of_week=1,
+        meal_type="breakfast",
+    )
+    session.add(slot)
+    await session.flush()
+    session.add(MenuItemMember(menu_item_id=slot.id, member_id=member.id, recipe_id=recipe.id))
+    await session.commit()
+
+    menus = await list_menus(db=session, _=None)
+    out = next(m for m in menus if m.id == menu.id)
+
+    assert out.kbju_summary is not None
+    assert out.kbju_summary.total.calories == 420
+    assert len(out.kbju_summary.by_member) == 1
+    assert out.kbju_summary.by_member[0].member_id == member.id
+    assert out.kbju_summary.by_member[0].calories == 420

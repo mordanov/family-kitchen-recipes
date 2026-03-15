@@ -10,7 +10,18 @@ from datetime import datetime
 
 from app.database import get_db
 from app.models import Menu, MenuItem, MenuItemMember, MenuStatus, Recipe, StockItem, PreparedDish, AppSettings, FamilyMember
-from app.schemas import MenuCreate, MenuOut, MenuItemCreate, MenuItemUpdate, AutoFillRequest, MemberAssignmentCreate
+from app.schemas import (
+    MenuCreate,
+    MenuOut,
+    MenuItemCreate,
+    MenuItemUpdate,
+    AutoFillRequest,
+    MemberAssignmentCreate,
+    MenuKbjuSummary,
+    MenuKbjuTotals,
+    MenuKbjuByDay,
+    MenuKbjuByMember,
+)
 from app.auth import get_current_user
 
 router = APIRouter()
@@ -156,6 +167,79 @@ def _menu_options():
     ]
 
 
+def _kbju_tuple(recipe: Recipe | None) -> tuple[float, float, float, float]:
+    if not recipe:
+        return 0.0, 0.0, 0.0, 0.0
+    return (
+        float(recipe.calories or 0.0),
+        float(recipe.proteins or 0.0),
+        float(recipe.fats or 0.0),
+        float(recipe.carbs or 0.0),
+    )
+
+
+def _add_to_bucket(bucket: dict[str, float], kbju: tuple[float, float, float, float]) -> None:
+    bucket["calories"] += kbju[0]
+    bucket["proteins"] += kbju[1]
+    bucket["fats"] += kbju[2]
+    bucket["carbs"] += kbju[3]
+
+
+def _menu_kbju_summary(menu: Menu) -> MenuKbjuSummary:
+    total = {"calories": 0.0, "proteins": 0.0, "fats": 0.0, "carbs": 0.0}
+    by_day: dict[int | None, dict[str, float]] = {}
+    by_member: dict[int, dict[str, float | int | str | None]] = {}
+
+    for item in menu.items:
+        day_key = item.day_of_week
+        if day_key not in by_day:
+            by_day[day_key] = {"calories": 0.0, "proteins": 0.0, "fats": 0.0, "carbs": 0.0}
+
+        # Per-member assignments override shared recipe for this slot.
+        if item.member_assignments:
+            for asn in item.member_assignments:
+                kbju = _kbju_tuple(asn.recipe)
+                _add_to_bucket(total, kbju)
+                _add_to_bucket(by_day[day_key], kbju)
+
+                if asn.member_id not in by_member:
+                    by_member[asn.member_id] = {
+                        "member_id": asn.member_id,
+                        "member_name": asn.member.name if asn.member else f"#{asn.member_id}",
+                        "member_color": asn.member.color if asn.member else None,
+                        "calories": 0.0,
+                        "proteins": 0.0,
+                        "fats": 0.0,
+                        "carbs": 0.0,
+                    }
+                _add_to_bucket(by_member[asn.member_id], kbju)
+        else:
+            kbju = _kbju_tuple(item.recipe)
+            _add_to_bucket(total, kbju)
+            _add_to_bucket(by_day[day_key], kbju)
+
+    day_items = [
+        MenuKbjuByDay(day_of_week=day, **vals)
+        for day, vals in sorted(by_day.items(), key=lambda x: (x[0] is None, x[0] or 0))
+    ]
+    member_items = [
+        MenuKbjuByMember(**vals)
+        for _, vals in sorted(by_member.items(), key=lambda x: str(x[1]["member_name"]))
+    ]
+
+    return MenuKbjuSummary(
+        total=MenuKbjuTotals(**total),
+        by_day=day_items,
+        by_member=member_items,
+    )
+
+
+def _menu_to_out(menu: Menu) -> MenuOut:
+    out = MenuOut.model_validate(menu)
+    out.kbju_summary = _menu_kbju_summary(menu)
+    return out
+
+
 @router.get("/", response_model=List[MenuOut])
 async def list_menus(db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     result = await db.execute(
@@ -163,7 +247,7 @@ async def list_menus(db: AsyncSession = Depends(get_db), _=Depends(get_current_u
         .options(*_menu_options())
         .order_by(Menu.created_at.desc())
     )
-    return result.scalars().all()
+    return [_menu_to_out(m) for m in result.scalars().all()]
 
 
 @router.get("/active", response_model=MenuOut)
@@ -177,7 +261,7 @@ async def get_active_menu(db: AsyncSession = Depends(get_db), _=Depends(get_curr
     menu = result.scalars().first()
     if not menu:
         raise HTTPException(status_code=404, detail="No active menu")
-    return menu
+    return _menu_to_out(menu)
 
 
 @router.post("/", response_model=MenuOut)
@@ -195,7 +279,7 @@ async def create_menu(data: MenuCreate, db: AsyncSession = Depends(get_db), _=De
     result = await db.execute(
         select(Menu).options(*_menu_options()).where(Menu.id == menu.id)
     )
-    return result.scalar_one()
+    return _menu_to_out(result.scalar_one())
 
 
 @router.get("/{menu_id}", response_model=MenuOut)
@@ -206,7 +290,7 @@ async def get_menu(menu_id: int, db: AsyncSession = Depends(get_db), _=Depends(g
     menu = result.scalar_one_or_none()
     if not menu:
         raise HTTPException(status_code=404, detail="Menu not found")
-    return menu
+    return _menu_to_out(menu)
 
 
 @router.post("/{menu_id}/items", response_model=MenuOut)
@@ -265,7 +349,7 @@ async def add_menu_item(
     result = await db.execute(
         select(Menu).options(*_menu_options()).where(Menu.id == menu_id)
     )
-    return result.scalar_one()
+    return _menu_to_out(result.scalar_one())
 
 
 @router.patch("/{menu_id}/items/{item_id}", response_model=MenuOut)
@@ -301,7 +385,7 @@ async def update_menu_item(
     result = await db.execute(
         select(Menu).options(*_menu_options()).where(Menu.id == menu_id)
     )
-    return result.scalar_one()
+    return _menu_to_out(result.scalar_one())
 
 
 @router.put("/{menu_id}/items/{item_id}/assignments", response_model=MenuOut)
@@ -342,7 +426,7 @@ async def set_item_assignments(
     result = await db.execute(
         select(Menu).options(*_menu_options()).where(Menu.id == menu_id)
     )
-    return result.scalar_one()
+    return _menu_to_out(result.scalar_one())
 
 
 @router.delete("/{menu_id}/items/{item_id}", response_model=MenuOut)
@@ -364,7 +448,7 @@ async def remove_menu_item(
     result = await db.execute(
         select(Menu).options(*_menu_options()).where(Menu.id == menu_id)
     )
-    return result.scalar_one()
+    return _menu_to_out(result.scalar_one())
 
 
 @router.post("/{menu_id}/close", response_model=MenuOut)
@@ -382,7 +466,7 @@ async def close_menu(menu_id: int, db: AsyncSession = Depends(get_db), _=Depends
     result = await db.execute(
         select(Menu).options(*_menu_options()).where(Menu.id == menu_id)
     )
-    return result.scalar_one()
+    return _menu_to_out(result.scalar_one())
 
 
 @router.get("/{menu_id}/shopping-list")
@@ -606,6 +690,17 @@ async def auto_fill_menu(
 
         return deprio(t1) + deprio(t2) + deprio(t3) + deprio(t4)
 
+    def choose_recipe(
+        preferred_set: set[int],
+        disliked_set: set[int],
+        exclude: set[int] | None = None,
+    ) -> Recipe | None:
+        preferred_pool = build_pool(preferred_set, disliked_set, exclude=exclude)
+        if preferred_pool:
+            return preferred_pool[0]
+        fallback_pool = build_pool(preferred_set, disliked_set)
+        return fallback_pool[0] if fallback_pool else None
+
     # Flat mode: previous behavior
     if not data.use_meal_slots:
         pool = build_pool(global_preferred_ids, global_disliked_ids)
@@ -625,7 +720,7 @@ async def auto_fill_menu(
 
         await db.commit()
         result = await db.execute(select(Menu).options(*_menu_options()).where(Menu.id == menu_id))
-        return {"added": added, "menu": MenuOut.model_validate(result.scalar_one())}
+        return {"added": added, "menu": _menu_to_out(result.scalar_one())}
 
     # Meal-slot mode: week x day x meal, with per-member choices
     all_meals = ["breakfast", "lunch", "dinner"]
@@ -650,12 +745,11 @@ async def auto_fill_menu(
                     member_picks: dict[int, Recipe] = {}
 
                     for m in members:
-                        pool = build_pool(
+                        pick = choose_recipe(
                             member_preferred.get(m.id, set()),
                             member_disliked.get(m.id, set()),
                             exclude=member_used[m.id],
                         )
-                        pick = next((r for r in pool), None)
                         if pick:
                             member_picks[m.id] = pick
                             member_used[m.id].add(pick.id)
@@ -694,8 +788,7 @@ async def auto_fill_menu(
                             ))
                         added += 1
                 else:
-                    pool = build_pool(global_preferred_ids, global_disliked_ids, exclude=shared_used)
-                    pick = next((r for r in pool), None)
+                    pick = choose_recipe(global_preferred_ids, global_disliked_ids, exclude=shared_used)
                     if pick:
                         shared_used.add(pick.id)
                         db.add(MenuItem(
@@ -712,4 +805,4 @@ async def auto_fill_menu(
 
     await db.commit()
     result = await db.execute(select(Menu).options(*_menu_options()).where(Menu.id == menu_id))
-    return {"added": added, "menu": MenuOut.model_validate(result.scalar_one())}
+    return {"added": added, "menu": _menu_to_out(result.scalar_one())}

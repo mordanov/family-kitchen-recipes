@@ -178,7 +178,7 @@ const MenuPage = (() => {
           </div>`;
     }
 
-    const addPanel = !isClosed ? renderAddPanel(usesSlots) : '';
+    const addPanel = !isClosed ? renderAddPanel() : '';
 
     const closedBadge = isClosed
       ? `<span class="badge" style="background:#e8e8ef;color:#6B6B80">Закрыто ${App.formatDate(activeMenu.closed_at)}</span>`
@@ -354,7 +354,7 @@ const MenuPage = (() => {
         const color = member ? member.color : '#999';
         const name = member ? member.name : `#${asn.member_id}`;
         const recipeName = asn.recipe ? asn.recipe.title : '—';
-        return `<span class="badge" style="background:${color}20;color:${color};border:1px solid ${color}40">
+        return `<span class="badge" style="background:${color}20;color:${color};border:1px solid currentColor">
           ${name}: ${recipeName}</span>`;
       }).join('');
     }
@@ -384,7 +384,7 @@ const MenuPage = (() => {
   }
 
   // ── Add-item panel ─────────────────────────────────────────────────────────
-  function renderAddPanel(usesSlots) {
+  function renderAddPanel() {
     const mealSelector = `
       <div class="form-row" style="gap:8px;margin-bottom:12px">
         <div class="form-group" style="flex:1">
@@ -418,24 +418,35 @@ const MenuPage = (() => {
         </div>
       </div>` : '';
 
+    const sharedButtonStyle = 'width:100%;justify-content:center';
+
     const recipeSelect = `
-      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-        <div class="form-group" style="flex:1;min-width:240px;margin-bottom:0">
+      <div>
+        <div class="form-group" style="margin-bottom:10px">
           <label class="form-label">Общее блюдо для всей семьи</label>
           <select class="form-control" id="add-item-recipe-select">
             <option value="">— выберите рецепт —</option>
             ${allRecipes.map(r => `<option value="${r.id}">${r.title}</option>`).join('')}
           </select>
         </div>
-        <button class="btn btn-primary" onclick="MenuPage.addSelectedRecipe()">+ Добавить блюдо</button>
-        ${allMembers.length ? `<button class="btn btn-sm" onclick="MenuPage.addItemNoRecipe()" style="font-size:12px">+ Добавить только назначения выше</button>` : ''}
+        <button class="btn btn-primary" style="${sharedButtonStyle}" onclick="MenuPage.addSelectedRecipe()">+ Добавить общее блюдо</button>
       </div>`;
+
+    const memberOnlyBtn = allMembers.length
+      ? `<div style="margin-bottom:14px">
+          <button class="btn btn-primary" style="${sharedButtonStyle}" onclick="MenuPage.addItemNoRecipe()">+ Добавить назначения членам семьи</button>
+        </div>`
+      : '';
+
+    const sectionDivider = allMembers.length ? '<hr class="divider" style="margin:14px 0" />' : '';
 
     return `
       <div class="add-recipe-panel">
         <h4>➕ Добавить блюдо в меню (неделя ${currentWeek})</h4>
         ${mealSelector}
         ${memberSection}
+        ${memberOnlyBtn}
+        ${sectionDivider}
         ${recipeSelect}
       </div>`;
   }
@@ -453,7 +464,6 @@ const MenuPage = (() => {
   function renderMemberAssignmentRows() {
     return allMembers.map(m => {
       const assignedRecipeId = pendingAssignments[m.id];
-      const assignedRecipe = assignedRecipeId ? allRecipes.find(r => r.id === assignedRecipeId) : null;
       return `
         <div class="member-assignment-row" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
           <span class="member-dot" style="background:${m.color};width:10px;height:10px;border-radius:50%;flex-shrink:0"></span>
@@ -480,21 +490,6 @@ const MenuPage = (() => {
 
   function setAddMeal(val) {
     addItemMealType = val || null;
-  }
-
-  function filterPicker(val) {
-    const low = val.toLowerCase();
-    const filtered = low ? allRecipes.filter(r => r.title.toLowerCase().includes(low)) : allRecipes;
-    const list = document.getElementById('recipe-picker-list');
-    if (list) list.innerHTML = filtered.map(r => `
-      <div class="recipe-picker-item" onclick="MenuPage.addItem(${r.id})">
-        <div style="font-size:24px">${getEmoji(r.cooking_method)}</div>
-        <div>
-          <div class="title">${r.title}</div>
-          <div class="meta">${App.cookingMethodLabel(r.cooking_method)} · ${r.servings} порц.</div>
-        </div>
-        <div style="margin-left:auto;color:var(--c-primary);font-weight:800;font-size:18px">+</div>
-      </div>`).join('');
   }
 
   function getEmoji(m) {
@@ -823,7 +818,7 @@ const MenuPage = (() => {
     load, setWeek, addItem, addItemNoRecipe, toggleCooked, removeItem, confirmClose,
     openShoppingList, openCreate, closeCreate, createMenu,
     openAutoFill, closeAutoFill, createAutoMenu, toggleMealSlotsOptions,
-    filterPicker, setAddDay, setAddMeal, setMemberAssignment,
+    setAddDay, setAddMeal, setMemberAssignment,
     makeSameForAll, makeDifferentForAll, addSelectedRecipe,
   };
 })();
