@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, Date, ForeignKey, Enum as SAEnum
+from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, Date, ForeignKey, Enum as SAEnum, Table
 from sqlalchemy.orm import relationship
 from datetime import datetime, date
 import enum
@@ -111,3 +111,50 @@ class AppSettings(Base):
     id = Column(Integer, primary_key=True)
     key = Column(String(100), unique=True, nullable=False)
     value = Column(Text, nullable=True)
+
+
+# ─── Family Members ───
+
+class Gender(str, enum.Enum):
+    male = "male"
+    female = "female"
+    other = "other"
+
+
+class DietModel(str, enum.Enum):
+    weight_gain = "weight_gain"
+    weight_loss = "weight_loss"
+    weight_maintain = "weight_maintain"
+
+
+member_preferred_recipes = Table(
+    "member_preferred_recipes",
+    Base.metadata,
+    Column("member_id", Integer, ForeignKey("family_members.id", ondelete="CASCADE"), primary_key=True),
+    Column("recipe_id", Integer, ForeignKey("recipes.id", ondelete="CASCADE"), primary_key=True),
+)
+
+member_disliked_recipes = Table(
+    "member_disliked_recipes",
+    Base.metadata,
+    Column("member_id", Integer, ForeignKey("family_members.id", ondelete="CASCADE"), primary_key=True),
+    Column("recipe_id", Integer, ForeignKey("recipes.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class FamilyMember(Base):
+    __tablename__ = "family_members"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    weight = Column(Float, nullable=True)       # кг
+    birth_date = Column(Date, nullable=True)
+    gender = Column(SAEnum(Gender), nullable=True)
+    diet_model = Column(SAEnum(DietModel), nullable=True, default=DietModel.weight_maintain)
+    photo_path = Column(String(500), nullable=True)
+    color = Column(String(20), nullable=False, default="#FF6B35")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    preferred_recipes = relationship("Recipe", secondary=member_preferred_recipes, lazy="selectin")
+    disliked_recipes = relationship("Recipe", secondary=member_disliked_recipes, lazy="selectin")
+
