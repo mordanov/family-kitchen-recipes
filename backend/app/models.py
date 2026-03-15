@@ -9,6 +9,7 @@ from app.database import Base
 class CookingMethod(str, enum.Enum):
     boiling = "boiling"
     frying = "frying"
+    dry_frying = "dry_frying"
     stewing = "stewing"
     air_fryer = "air_fryer"
     baking = "baking"

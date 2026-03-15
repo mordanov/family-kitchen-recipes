@@ -19,10 +19,10 @@ class LoginRequest(BaseModel):
 # Recipe
 class RecipeBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
-    ingredients: str = ""
+    ingredients: str = Field(..., min_length=1)
     shopping_list: str = ""
     cooking_method: CookingMethod = CookingMethod.boiling
-    servings: int = Field(default=4, ge=1, le=16)
+    servings: int = Field(default=4, ge=1, le=50)
     extra_info: Optional[str] = None
 
 

@@ -205,10 +205,24 @@ async def get_shopping_list(menu_id: int, db: AsyncSession = Depends(get_db), _=
         raise HTTPException(status_code=404, detail="Menu not found")
 
     shopping = {}
+    all_lines: list[str] = []
     for item in menu.items:
         if not item.is_cooked and item.recipe and item.recipe.shopping_list:
             recipe_title = item.recipe.title
             if recipe_title not in shopping:
                 shopping[recipe_title] = item.recipe.shopping_list
+            lines = [l.strip() for l in item.recipe.shopping_list.splitlines() if l.strip()]
+            all_lines.extend(lines)
 
-    return {"menu_title": menu.title, "shopping_lists": shopping}
+    # Deduplicate preserving order
+    seen: set[str] = set()
+    unique_lines: list[str] = []
+    for line in all_lines:
+        key = line.lower()
+        if key not in seen:
+            seen.add(key)
+            unique_lines.append(line)
+
+    combined = "\n".join(unique_lines)
+
+    return {"menu_title": menu.title, "shopping_lists": shopping, "combined_list": combined}

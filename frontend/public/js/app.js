@@ -105,7 +105,7 @@ const App = (() => {
 
   // ── Helpers ──
   function cookingMethodLabel(m) {
-    const map = { boiling: '🫕 Варка', frying: '🍳 Жарка', stewing: '♨️ Тушение', air_fryer: '💨 Аэрогриль', baking: '🔥 Запекание', raw: '🥗 Сырое' };
+    const map = { boiling: '🫕 Варка', frying: '🍳 Жарка', dry_frying: '🥘 Жарка на сухой сковороде', stewing: '♨️ Тушение', air_fryer: '💨 Аэрогриль', baking: '🔥 Запекание', raw: '🥗 Сырое' };
     return map[m] || m;
   }
 

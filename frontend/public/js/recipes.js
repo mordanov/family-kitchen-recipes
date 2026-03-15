@@ -62,7 +62,7 @@ const RecipesPage = (() => {
   }
 
   function getRecipeEmoji(method) {
-    const map = { boiling: '🍲', frying: '🍳', stewing: '♨️', air_fryer: '🌀', baking: '🥧', raw: '🥗' };
+    const map = { boiling: '🍲', frying: '🍳', dry_frying: '🥘', stewing: '♨️', air_fryer: '🌀', baking: '🥧', raw: '🥗' };
     return map[method] || '🍽️';
   }
 
@@ -196,10 +196,16 @@ const RecipesPage = (() => {
     const title = document.getElementById('recipe-title').value.trim();
     if (!title) { App.toast('Введите название блюда', 'error'); return; }
 
+    const ingredients = document.getElementById('recipe-ingredients').value.trim();
+    if (!ingredients) { App.toast('Заполните ингредиенты для готовки', 'error'); return; }
+
+    const shoppingRaw = document.getElementById('recipe-shopping').value.trim();
+    const shopping_list = shoppingRaw || ingredients;
+
     const fd = new FormData();
     fd.append('title', title);
-    fd.append('ingredients', document.getElementById('recipe-ingredients').value);
-    fd.append('shopping_list', document.getElementById('recipe-shopping').value);
+    fd.append('ingredients', ingredients);
+    fd.append('shopping_list', shopping_list);
     fd.append('cooking_method', document.getElementById('recipe-method').value);
     fd.append('servings', document.getElementById('recipe-servings').value);
     fd.append('extra_info', document.getElementById('recipe-extra').value);
