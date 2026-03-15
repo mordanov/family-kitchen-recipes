@@ -590,6 +590,45 @@ select.form-control {
 .gap-2 { gap: 8px; }
 .items-center { align-items: center; }
 .flex-1 { flex: 1; }
+
+/* ─── WAREHOUSE ─── */
+.warehouse-section {
+  background: var(--c-surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--c-border);
+  padding: 20px;
+  min-height: 200px;
+}
+.warehouse-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--c-surface2);
+  margin-bottom: 8px;
+  gap: 12px;
+}
+.warehouse-row:hover { background: #FFE8D0; }
+.warehouse-row-info { flex: 1; min-width: 0; }
+.warehouse-row-name {
+  display: block;
+  font-weight: 700;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.warehouse-row-qty {
+  display: block;
+  font-size: 13px;
+  color: var(--c-text-muted);
+  margin-top: 2px;
+}
+.warehouse-row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+@media (max-width: 700px) {
+  #warehouse-content > div { grid-template-columns: 1fr !important; }
+}
 </style>
 </head>
 <body>
@@ -631,6 +670,12 @@ select.form-control {
       </button>
       <button class="nav-item" data-page="shopping">
         <span class="nav-icon">🛒</span> Список покупок
+      </button>
+      <button class="nav-item" data-page="warehouse">
+        <span class="nav-icon">🏪</span> Склад
+      </button>
+      <button class="nav-item" data-page="settings">
+        <span class="nav-icon">⚙️</span> Настройки
       </button>
       <button class="nav-item" data-page="history">
         <span class="nav-icon">📚</span> История меню
@@ -674,6 +719,22 @@ select.form-control {
         <h1 class="page-title">Список <span>покупок</span></h1>
       </div>
       <div id="shopping-content"></div>
+    </div>
+
+    <!-- WAREHOUSE PAGE -->
+    <div class="page" id="page-warehouse">
+      <div class="page-header">
+        <h1 class="page-title">Склад <span>продуктов</span></h1>
+      </div>
+      <div id="warehouse-content"></div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div class="page" id="page-settings">
+      <div class="page-header">
+        <h1 class="page-title">Настройки <span>сопоставления</span></h1>
+      </div>
+      <div id="settings-content"></div>
     </div>
 
     <!-- HISTORY PAGE -->
@@ -820,5 +881,7 @@ select.form-control {
 <script src="/js/recipes.js"></script>
 <script src="/js/menu.js"></script>
 <script src="/js/shopping.js"></script>
+<script src="/js/warehouse.js"></script>
+<script src="/js/settings.js"></script>
 </body>
 </html>

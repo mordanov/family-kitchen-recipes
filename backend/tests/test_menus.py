@@ -2,7 +2,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.api.menus import add_menu_item, create_menu, get_shopping_list
-from app.models import CookingMethod, Menu, MenuItem, MenuStatus, Recipe
+from app.models import CookingMethod, Menu, MenuItem, MenuStatus, Recipe, StockItem, PreparedDish, AppSettings
 from app.schemas import MenuCreate, MenuItemCreate
 
 
@@ -90,3 +90,125 @@ async def test_get_shopping_list_skips_cooked_items_and_deduplicates_recipe_titl
     assert "combined_list" in shopping
     assert "картофель" in shopping["combined_list"]
     assert "мука" not in shopping["combined_list"]  # пирог помечен как приготовленный
+
+
+@pytest.mark.asyncio
+async def test_get_shopping_list_splits_in_stock_and_to_buy_and_returns_prepared(session):
+    menu = Menu(title="Склад-тест", weeks=1, status=MenuStatus.active)
+    soup = Recipe(
+        title="Суп",
+        ingredients="вода",
+        shopping_list="капуста 400 г\nморковь 2 шт",
+        cooking_method=CookingMethod.boiling,
+        servings=4,
+    )
+    session.add_all([menu, soup, StockItem(name="капуста", quantity="1 кг")])
+    await session.commit()
+    await session.refresh(menu)
+    await session.refresh(soup)
+
+    session.add(MenuItem(menu_id=menu.id, recipe_id=soup.id, position=0, week_number=1, is_cooked=False))
+    session.add(PreparedDish(recipe_id=soup.id, servings=1.5, note="морозилка"))
+    await session.commit()
+
+    shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
+
+    assert "капуста 400 г" in shopping["in_stock_list"]
+    assert "морковь 2 шт" in shopping["to_buy_list"]
+    assert shopping["prepared_items"]
+    assert shopping["prepared_items"][0]["recipe_title"] == "Суп"
+
+
+@pytest.mark.asyncio
+async def test_get_shopping_list_matches_synonyms_and_normalized_tokens(session):
+    menu = Menu(title="Синонимы", weeks=1, status=MenuStatus.active)
+    recipe = Recipe(
+        title="Овощной гарнир",
+        ingredients="овощи",
+        shopping_list="картошка 1 кг\nпомидоры 2 шт\nлук 1 шт",
+        cooking_method=CookingMethod.stewing,
+        servings=3,
+    )
+    session.add_all(
+        [
+            menu,
+            recipe,
+            StockItem(name="картофель", quantity="2 кг"),
+            StockItem(name="томаты", quantity="5 шт"),
+        ]
+    )
+    await session.commit()
+    await session.refresh(menu)
+    await session.refresh(recipe)
+
+    session.add(MenuItem(menu_id=menu.id, recipe_id=recipe.id, position=0, week_number=1, is_cooked=False))
+    await session.commit()
+
+    shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
+
+    assert "картошка 1 кг" in shopping["in_stock_list"]
+    assert "помидоры 2 шт" in shopping["in_stock_list"]
+    assert "лук 1 шт" in shopping["to_buy_list"]
+
+
+@pytest.mark.asyncio
+async def test_get_shopping_list_matches_phrase_synonyms_and_descriptors(session):
+    menu = Menu(title="Фразы", weeks=1, status=MenuStatus.active)
+    recipe = Recipe(
+        title="Салат",
+        ingredients="овощи",
+        shopping_list="болгарский перец 2 шт\nсвежий чеснок 3 зубчика\nукроп 1 пучок",
+        cooking_method=CookingMethod.raw,
+        servings=2,
+    )
+    session.add_all(
+        [
+            menu,
+            recipe,
+            StockItem(name="перец", quantity="4 шт"),
+            StockItem(name="чеснок", quantity="1 головка"),
+        ]
+    )
+    await session.commit()
+    await session.refresh(menu)
+    await session.refresh(recipe)
+
+    session.add(MenuItem(menu_id=menu.id, recipe_id=recipe.id, position=0, week_number=1, is_cooked=False))
+    await session.commit()
+
+    shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
+
+    assert "болгарский перец 2 шт" in shopping["in_stock_list"]
+    assert "свежий чеснок 3 зубчика" in shopping["in_stock_list"]
+    assert "укроп 1 пучок" in shopping["to_buy_list"]
+
+
+@pytest.mark.asyncio
+async def test_get_shopping_list_applies_custom_aliases_from_settings(session):
+    menu = Menu(title="Пользовательские алиасы", weeks=1, status=MenuStatus.active)
+    recipe = Recipe(
+        title="Рататуй",
+        ingredients="овощи",
+        shopping_list="цуккини 2 шт\nчеснок 2 зубчика",
+        cooking_method=CookingMethod.stewing,
+        servings=2,
+    )
+    session.add_all(
+        [
+            menu,
+            recipe,
+            StockItem(name="кабачок", quantity="3 шт"),
+            AppSettings(key="warehouse_product_synonyms", value='{"цуккини": "кабачок"}'),
+        ]
+    )
+    await session.commit()
+    await session.refresh(menu)
+    await session.refresh(recipe)
+
+    session.add(MenuItem(menu_id=menu.id, recipe_id=recipe.id, position=0, week_number=1, is_cooked=False))
+    await session.commit()
+
+    shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
+
+    assert "цуккини 2 шт" in shopping["in_stock_list"]
+    assert "чеснок 2 зубчика" in shopping["to_buy_list"]

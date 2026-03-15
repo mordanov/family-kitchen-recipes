@@ -5,19 +5,36 @@ const MenuPage = (() => {
   let activeMenu = null;
   let currentWeek = 1;
   let allRecipes = [];
+  let preparedByRecipeId = {};
+  let stockNames = new Set();
 
   async function load() {
     const content = document.getElementById('menu-content');
     content.innerHTML = '<div class="spinner"></div>';
 
-    try {
-      activeMenu = await API.getActiveMenu();
-    } catch (e) {
-      activeMenu = null;
+    const [activeMenuRes, recipesRes, preparedRes, stockRes] = await Promise.allSettled([
+      API.getActiveMenu(),
+      API.listRecipes(),
+      API.listPrepared(),
+      API.listStock(),
+    ]);
+
+    activeMenu = activeMenuRes.status === 'fulfilled' ? activeMenuRes.value : null;
+    allRecipes = recipesRes.status === 'fulfilled' ? recipesRes.value : [];
+
+    preparedByRecipeId = {};
+    if (preparedRes.status === 'fulfilled') {
+      for (const p of preparedRes.value || []) {
+        preparedByRecipeId[p.recipe_id] = (preparedByRecipeId[p.recipe_id] || 0) + Number(p.servings || 0);
+      }
     }
 
-    // Always load recipes for picker
-    try { allRecipes = await API.listRecipes(); } catch {}
+    stockNames = new Set();
+    if (stockRes.status === 'fulfilled') {
+      for (const s of stockRes.value || []) {
+        if (s.name) stockNames.add(String(s.name).trim().toLowerCase());
+      }
+    }
 
     render();
   }
@@ -89,6 +106,23 @@ const MenuPage = (() => {
       ? `<span class="menu-item-kbju">${r.calories?.toFixed(0)} ккал</span>`
       : '';
 
+    const preparedServings = r ? (preparedByRecipeId[r.id] || 0) : 0;
+    const preparedBadge = preparedServings > 0
+      ? `<span class="badge" style="background:#eef7ff;color:#2b5a9a">🍱 Заготовка: ${preparedServings} порц.</span>`
+      : '';
+
+    const stockHint = r && r.shopping_list
+      ? (() => {
+          const tokens = r.shopping_list
+            .split('\n')
+            .map(l => l.trim().toLowerCase().split(' ')[0])
+            .filter(Boolean);
+          const matched = tokens.filter(t => stockNames.has(t));
+          if (!matched.length) return '';
+          return `<span class="badge" style="background:#f0fff8;color:#1f7d4f">✅ На складе: ${matched.length} поз.</span>`;
+        })()
+      : '';
+
     const checkClass = item.is_cooked ? 'checked' : '';
     const rowClass = item.is_cooked ? 'cooked' : '';
 
@@ -101,9 +135,11 @@ const MenuPage = (() => {
         <div class="menu-item-check ${checkClass}" onclick="MenuPage.toggleCooked(${item.id}, ${!item.is_cooked})">${item.is_cooked ? '✓' : ''}</div>
         <div style="flex:1">
           <div class="menu-item-title">${r ? r.title : 'Удалённый рецепт'}</div>
-          <div style="display:flex;gap:8px;margin-top:4px">
+          <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
             ${r ? `<span class="menu-item-meta">${App.cookingMethodLabel(r.cooking_method)} · ${r.servings} порц.</span>` : ''}
             ${kbju}
+            ${preparedBadge}
+            ${stockHint}
           </div>
         </div>
         ${removeBtn}
@@ -111,8 +147,7 @@ const MenuPage = (() => {
   }
 
   function renderAddPanel() {
-    const filtered = allRecipes;
-    const listHtml = filtered.map(r => `
+    const listHtml = allRecipes.map(r => `
       <div class="recipe-picker-item" onclick="MenuPage.addItem(${r.id})">
         <div style="font-size:24px">${getEmoji(r.cooking_method)}</div>
         <div>
@@ -146,7 +181,7 @@ const MenuPage = (() => {
   }
 
   function getEmoji(m) {
-    const map = { boiling:'🍲', frying:'🍳', stewing:'♨️', air_fryer:'🌀', baking:'🥧', raw:'🥗' };
+    const map = { boiling:'🍲', frying:'🍳', dry_frying:'🥘', stewing:'♨️', air_fryer:'🌀', baking:'🥧', raw:'🥗' };
     return map[m] || '🍽️';
   }
 
