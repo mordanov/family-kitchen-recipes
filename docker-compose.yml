@@ -6,8 +6,8 @@ services:
     container_name: recipes_db
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-recipes}
-      POSTGRES_USER: ${POSTGRES_USER:-recipes_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-recipes_pass}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -23,13 +23,13 @@ services:
       dockerfile: Dockerfile
     container_name: recipes_backend
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-recipes_user}:${POSTGRES_PASSWORD:-recipes_pass}@db:5432/${POSTGRES_DB:-recipes}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       SECRET_KEY: ${SECRET_KEY:-super-secret-key-change-in-production}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      USER1_NAME: ${USER1_NAME:-user1}
-      USER1_PASSWORD: ${USER1_PASSWORD:-password1}
-      USER2_NAME: ${USER2_NAME:-user2}
-      USER2_PASSWORD: ${USER2_PASSWORD:-password2}
+      USER1_NAME: ${USER1_NAME}
+      USER1_PASSWORD: ${USER1_PASSWORD}
+      USER2_NAME: ${USER2_NAME}
+      USER2_PASSWORD: ${USER2_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
