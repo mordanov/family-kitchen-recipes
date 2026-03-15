@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
-from datetime import datetime
+from typing import Optional, List, Dict
+from datetime import datetime, date
 from app.models import CookingMethod, MenuStatus
 
 
@@ -104,3 +104,63 @@ class SettingOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class SynonymsUpdate(BaseModel):
+    aliases: Dict[str, str] = Field(default_factory=dict)
+
+
+class SynonymsOut(BaseModel):
+    aliases: Dict[str, str] = Field(default_factory=dict)
+
+
+# Stock
+class StockItemCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    quantity: str = Field(..., min_length=1, max_length=100)
+    added_on: date = Field(default_factory=date.today)
+
+
+class StockItemUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    quantity: Optional[str] = Field(None, min_length=1, max_length=100)
+    added_on: Optional[date] = None
+
+
+class StockItemOut(BaseModel):
+    id: int
+    name: str
+    quantity: str
+    added_on: date
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PreparedDishCreate(BaseModel):
+    recipe_id: int
+    servings: float = Field(..., gt=0)
+    note: Optional[str] = None
+    added_on: date = Field(default_factory=date.today)
+
+
+class PreparedDishUpdate(BaseModel):
+    recipe_id: Optional[int] = None
+    servings: Optional[float] = Field(None, gt=0)
+    note: Optional[str] = None
+    added_on: Optional[date] = None
+
+
+class PreparedDishOut(BaseModel):
+    id: int
+    recipe_id: int
+    servings: float
+    note: Optional[str] = None
+    added_on: date
+    updated_at: datetime
+    recipe: Optional[RecipeOut] = None
+
+    class Config:
+        from_attributes = True
+

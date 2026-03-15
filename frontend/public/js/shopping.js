@@ -36,7 +36,11 @@ const ShoppingPage = (() => {
         return;
       }
 
-      const combinedItems = (data.combined_list || '')
+      const toBuyItems = (data.to_buy_list || data.combined_list || '')
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean);
+      const inStockItems = (data.in_stock_list || '')
         .split('\n')
         .map(l => l.trim())
         .filter(Boolean);
@@ -47,6 +51,8 @@ const ShoppingPage = (() => {
           <pre>${list}</pre>
         </div>`).join('<hr class="divider"/>');
 
+      const preparedItems = Array.isArray(data.prepared_items) ? data.prepared_items : [];
+
       content.innerHTML = `
         <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
           <p style="font-size:15px;color:var(--c-text-muted)">Непросмотренные блюда меню <strong>${data.menu_title}</strong></p>
@@ -54,18 +60,34 @@ const ShoppingPage = (() => {
         </div>
 
         <div id="shopping-printable">
-          <div class="shopping-list-block" style="margin-bottom:24px">
-            <h3 style="font-family:var(--font-display);margin-bottom:16px">🛒 Всё для покупки</h3>
+          <div class="shopping-list-block" style="margin-bottom:20px">
+            <h3 style="font-family:var(--font-display);margin-bottom:10px">🛒 Купить</h3>
             <ul style="list-style:none;padding:0;margin:0">
-              ${combinedItems.map(item => `
+              ${toBuyItems.map(item => `
                 <li class="shopping-combined-item">
                   <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 0;border-bottom:1px solid var(--c-surface2)">
                     <input type="checkbox" style="width:18px;height:18px;accent-color:var(--c-primary);flex-shrink:0" onchange="this.closest('label').style.opacity=this.checked?'0.4':'1'">
                     <span>${item}</span>
                   </label>
-                </li>`).join('')}
+                </li>`).join('') || '<li style="color:var(--c-text-muted)">Ничего покупать не нужно 🎉</li>'}
             </ul>
           </div>
+
+          ${inStockItems.length ? `
+          <div class="shopping-list-block" style="margin-bottom:20px;background:#f0fff8">
+            <h3 style="font-family:var(--font-display);margin-bottom:10px">✅ Уже есть на складе</h3>
+            <ul style="list-style:none;padding:0;margin:0">
+              ${inStockItems.map(item => `<li style="padding:6px 0;border-bottom:1px solid #d8f3e5">${item}</li>`).join('')}
+            </ul>
+          </div>` : ''}
+
+          ${preparedItems.length ? `
+          <div class="shopping-list-block" style="margin-bottom:20px;background:#eef7ff">
+            <h3 style="font-family:var(--font-display);margin-bottom:10px">🍱 Заготовки в наличии</h3>
+            <ul style="list-style:none;padding:0;margin:0">
+              ${preparedItems.map(p => `<li style="padding:6px 0;border-bottom:1px solid #d9e7f8">${p.recipe_title || 'Рецепт'} — ${p.servings} порц.${p.note ? ' · ' + p.note : ''}</li>`).join('')}
+            </ul>
+          </div>` : ''}
 
           <details style="margin-top:8px">
             <summary style="cursor:pointer;font-size:15px;color:var(--c-text-muted);user-select:none;padding:8px 0">

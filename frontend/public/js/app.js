@@ -90,6 +90,8 @@ const App = (() => {
     if (page === 'menu') MenuPage.load();
     if (page === 'shopping') ShoppingPage.load();
     if (page === 'history') HistoryPage.load();
+    if (page === 'warehouse') WarehousePage.load();
+    if (page === 'settings') SettingsPage.load();
   }
 
   // ── Toasts ──

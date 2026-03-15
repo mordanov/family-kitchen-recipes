@@ -1,4 +1,6 @@
 from typing import List
+import json
+import re
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -6,11 +8,120 @@ from sqlalchemy.orm import selectinload
 from datetime import datetime
 
 from app.database import get_db
-from app.models import Menu, MenuItem, MenuStatus, Recipe
+from app.models import Menu, MenuItem, MenuStatus, Recipe, StockItem, PreparedDish, AppSettings
 from app.schemas import MenuCreate, MenuOut, MenuItemCreate, MenuItemUpdate
 from app.auth import get_current_user
 
 router = APIRouter()
+
+DEFAULT_PRODUCT_SYNONYMS = {
+    "картошка": "картофель",
+    "картофеля": "картофель",
+    "картофельный": "картофель",
+    "помидоры": "помидор",
+    "помидора": "помидор",
+    "томат": "помидор",
+    "томаты": "помидор",
+    "баклажаны": "баклажан",
+    "огурцы": "огурец",
+    "моркови": "морковь",
+    "яйца": "яйцо",
+    "чеснока": "чеснок",
+    "свекла": "свекла",
+    "свеклы": "свекла",
+}
+
+DEFAULT_PHRASE_SYNONYMS = {
+    "болгарский перец": "перец",
+    "сладкий перец": "перец",
+    "зеленый лук": "лук",
+    "зеленый чеснок": "чеснок",
+}
+
+PRODUCT_SYNONYMS_KEY = "warehouse_product_synonyms"
+PHRASE_SYNONYMS_KEY = "warehouse_phrase_synonyms"
+
+UNIT_TOKENS = {
+    "г", "гр", "грамм", "грамма", "граммов",
+    "кг", "килограмм", "килограмма", "килограммов",
+    "мл", "л", "литр", "литра", "литров",
+    "шт", "штука", "штуки", "штук", "уп", "упак", "упаковка",
+    "ст", "стл", "чл", "зубчик", "зубчика", "зубчиков", "пучок", "пучка", "пучков",
+}
+
+DESCRIPTOR_TOKENS = {
+    "свежий", "свежая", "свежие", "замороженный", "замороженная", "замороженные",
+    "красный", "красная", "зеленый", "зеленая", "белый", "белая",
+}
+
+
+def _canonical_product_token(token: str, product_synonyms: dict[str, str]) -> str:
+    token = token.strip().lower().replace("ё", "е")
+    return product_synonyms.get(token, token)
+
+
+def _extract_product_key(
+    line: str,
+    product_synonyms: dict[str, str],
+    phrase_synonyms: dict[str, str],
+) -> str:
+    text = line.strip().lower().replace("ё", "е")
+    # Keep words/numbers, normalize separators.
+    text = re.sub(r"[^\w\s]", " ", text).replace("-", " ")
+    text = re.sub(r"\s+", " ", text).strip()
+
+    if not text:
+        return ""
+
+    for phrase, canonical in phrase_synonyms.items():
+        if phrase in text:
+            return canonical
+
+    tokens = [t for t in text.split() if t]
+
+    for token in tokens:
+        if re.fullmatch(r"\d+(?:[\.,]\d+)?", token):
+            continue
+        if token in UNIT_TOKENS or token in DESCRIPTOR_TOKENS:
+            continue
+        return _canonical_product_token(token, product_synonyms)
+    return ""
+
+
+def _load_aliases(raw: str | None) -> dict[str, str]:
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+
+    aliases: dict[str, str] = {}
+    for k, v in data.items():
+        if not isinstance(k, str) or not isinstance(v, str):
+            continue
+        key = k.strip().lower().replace("ё", "е")
+        val = v.strip().lower().replace("ё", "е")
+        if key and val:
+            aliases[key] = val
+    return aliases
+
+
+async def _merged_synonyms(db: AsyncSession) -> tuple[dict[str, str], dict[str, str]]:
+    result = await db.execute(
+        select(AppSettings).where(AppSettings.key.in_([PRODUCT_SYNONYMS_KEY, PHRASE_SYNONYMS_KEY]))
+    )
+    rows = result.scalars().all()
+    by_key = {row.key: row.value for row in rows}
+
+    product = dict(DEFAULT_PRODUCT_SYNONYMS)
+    product.update(_load_aliases(by_key.get(PRODUCT_SYNONYMS_KEY)))
+
+    phrase = dict(DEFAULT_PHRASE_SYNONYMS)
+    phrase.update(_load_aliases(by_key.get(PHRASE_SYNONYMS_KEY)))
+    return product, phrase
 
 
 @router.get("/", response_model=List[MenuOut])
@@ -204,6 +315,25 @@ async def get_shopping_list(menu_id: int, db: AsyncSession = Depends(get_db), _=
     if not menu:
         raise HTTPException(status_code=404, detail="Menu not found")
 
+    product_synonyms, phrase_synonyms = await _merged_synonyms(db)
+
+    stock_result = await db.execute(select(StockItem))
+    stock_items = stock_result.scalars().all()
+    stock_names = {
+        key
+        for s in stock_items
+        for key in [_extract_product_key(s.name or "", product_synonyms, phrase_synonyms)]
+        if key
+    }
+
+    prepared_result = await db.execute(
+        select(PreparedDish).options(selectinload(PreparedDish.recipe))
+    )
+    prepared_items = prepared_result.scalars().all()
+    prepared_by_recipe_id = {}
+    for p in prepared_items:
+        prepared_by_recipe_id[p.recipe_id] = prepared_by_recipe_id.get(p.recipe_id, 0.0) + float(p.servings)
+
     shopping = {}
     all_lines: list[str] = []
     for item in menu.items:
@@ -223,6 +353,32 @@ async def get_shopping_list(menu_id: int, db: AsyncSession = Depends(get_db), _=
             seen.add(key)
             unique_lines.append(line)
 
-    combined = "\n".join(unique_lines)
+    in_stock_lines: list[str] = []
+    to_buy_lines: list[str] = []
+    for line in unique_lines:
+        key = _extract_product_key(line, product_synonyms, phrase_synonyms)
+        if key and key in stock_names:
+            in_stock_lines.append(line)
+        else:
+            to_buy_lines.append(line)
 
-    return {"menu_title": menu.title, "shopping_lists": shopping, "combined_list": combined}
+    prepared_summary = [
+        {
+            "recipe_id": p.recipe_id,
+            "recipe_title": p.recipe.title if p.recipe else "",
+            "servings": float(p.servings),
+            "note": p.note,
+        }
+        for p in prepared_items
+    ]
+
+    return {
+        "menu_title": menu.title,
+        "shopping_lists": shopping,
+        "combined_list": "\n".join(unique_lines),
+        "to_buy_list": "\n".join(to_buy_lines),
+        "in_stock_list": "\n".join(in_stock_lines),
+        "stock_items": [{"name": s.name, "quantity": s.quantity} for s in stock_items],
+        "prepared_items": prepared_summary,
+        "prepared_by_recipe_id": prepared_by_recipe_id,
+    }

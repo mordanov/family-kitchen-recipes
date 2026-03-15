@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, ForeignKey, Enum as SAEnum
+from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, Date, ForeignKey, Enum as SAEnum
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, date
 import enum
 
 from app.database import Base
@@ -79,6 +79,31 @@ class MenuItem(Base):
 
     menu = relationship("Menu", back_populates="items")
     recipe = relationship("Recipe", back_populates="menu_items")
+
+
+class StockItem(Base):
+    """В наличии — продукты в холодильнике/кладовой"""
+    __tablename__ = "stock_items"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(200), nullable=False)
+    quantity = Column(String(100), nullable=False, default="")  # "400 г", "5 шт", "3 кг"
+    added_on = Column(Date, nullable=False, default=date.today)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PreparedDish(Base):
+    """Заготовки — приготовленные блюда в холодильнике/морозильнике"""
+    __tablename__ = "prepared_dishes"
+    id = Column(Integer, primary_key=True)
+    recipe_id = Column(Integer, ForeignKey("recipes.id", ondelete="CASCADE"), nullable=False)
+    servings = Column(Float, nullable=False, default=1.0)  # количество порций в наличии
+    note = Column(String(500), nullable=True)
+    added_on = Column(Date, nullable=False, default=date.today)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    recipe = relationship("Recipe")
 
 
 class AppSettings(Base):
