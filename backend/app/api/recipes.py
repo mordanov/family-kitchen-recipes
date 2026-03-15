@@ -1,0 +1,229 @@
+import os
+import uuid
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+import aiofiles
+
+from app.database import get_db
+from app.models import Recipe, CookingMethod
+from app.schemas import RecipeOut
+from app.auth import get_current_user
+from app.services.kbju import calculate_kbju
+
+router = APIRouter()
+UPLOAD_DIR = "/app/uploads"
+
+
+async def run_kbju_calculation(recipe_id: int, db_url: str):
+    """Background task to calculate KBJU after recipe save. Retries up to 3 times."""
+    import asyncio
+    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+    import logging
+    logger = logging.getLogger(__name__)
+
+    engine = create_async_engine(db_url)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    for attempt in range(3):
+        try:
+            async with session_factory() as session:
+                result = await session.execute(select(Recipe).where(Recipe.id == recipe_id))
+                recipe = result.scalar_one_or_none()
+                if not recipe:
+                    logger.warning(f"Recipe {recipe_id} not found for KBJU calculation")
+                    break
+
+                kbju = await calculate_kbju(
+                    recipe.title,
+                    recipe.ingredients,
+                    recipe.cooking_method.value,
+                    recipe.servings,
+                )
+                if kbju:
+                    recipe.calories = kbju["calories"]
+                    recipe.proteins = kbju["proteins"]
+                    recipe.fats = kbju["fats"]
+                    recipe.carbs = kbju["carbs"]
+                    recipe.kbju_calculated = True
+                    await session.commit()
+                    logger.info(f"KBJU calculated for recipe {recipe_id}: {kbju}")
+                    break
+                else:
+                    logger.warning(f"KBJU calculation returned None for recipe {recipe_id}, attempt {attempt+1}")
+                    if attempt < 2:
+                        await asyncio.sleep(5 * (attempt + 1))
+        except Exception as e:
+            logger.error(f"Error in KBJU background task for recipe {recipe_id}: {e}")
+            if attempt < 2:
+                await asyncio.sleep(5)
+
+    await engine.dispose()
+
+
+@router.get("/", response_model=List[RecipeOut])
+async def list_recipes(
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+    search: Optional[str] = None,
+):
+    query = select(Recipe).order_by(Recipe.updated_at.desc())
+    if search:
+        query = query.where(Recipe.title.ilike(f"%{search}%"))
+    result = await db.execute(query)
+    return result.scalars().all()
+
+
+@router.post("/", response_model=RecipeOut)
+async def create_recipe(
+    background_tasks: BackgroundTasks,
+    title: str = Form(...),
+    ingredients: str = Form(default=""),
+    shopping_list: str = Form(default=""),
+    cooking_method: CookingMethod = Form(default=CookingMethod.boiling),
+    servings: int = Form(default=4),
+    extra_info: str = Form(default=""),
+    image: Optional[UploadFile] = File(default=None),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    image_path = None
+    if image and image.filename:
+        ext = os.path.splitext(image.filename)[1].lower()
+        filename = f"{uuid.uuid4()}{ext}"
+        filepath = os.path.join(UPLOAD_DIR, filename)
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        async with aiofiles.open(filepath, 'wb') as f:
+            content = await image.read()
+            await f.write(content)
+        image_path = f"/uploads/{filename}"
+
+    recipe = Recipe(
+        title=title,
+        ingredients=ingredients,
+        shopping_list=shopping_list,
+        cooking_method=cooking_method,
+        servings=servings,
+        extra_info=extra_info if extra_info else None,
+        image_path=image_path,
+    )
+    db.add(recipe)
+    await db.commit()
+    await db.refresh(recipe)
+
+    from app.config import settings
+    background_tasks.add_task(run_kbju_calculation, recipe.id, settings.DATABASE_URL)
+
+    return recipe
+
+
+@router.get("/{recipe_id}", response_model=RecipeOut)
+async def get_recipe(recipe_id: int, db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
+    result = await db.execute(select(Recipe).where(Recipe.id == recipe_id))
+    recipe = result.scalar_one_or_none()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return recipe
+
+
+@router.put("/{recipe_id}", response_model=RecipeOut)
+async def update_recipe(
+    recipe_id: int,
+    background_tasks: BackgroundTasks,
+    title: str = Form(...),
+    ingredients: str = Form(default=""),
+    shopping_list: str = Form(default=""),
+    cooking_method: CookingMethod = Form(default=CookingMethod.boiling),
+    servings: int = Form(default=4),
+    extra_info: str = Form(default=""),
+    image: Optional[UploadFile] = File(default=None),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    result = await db.execute(select(Recipe).where(Recipe.id == recipe_id))
+    recipe = result.scalar_one_or_none()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    if image and image.filename:
+        # Delete old image
+        if recipe.image_path:
+            old_path = "/app" + recipe.image_path
+            if os.path.exists(old_path):
+                os.remove(old_path)
+        ext = os.path.splitext(image.filename)[1].lower()
+        filename = f"{uuid.uuid4()}{ext}"
+        filepath = os.path.join(UPLOAD_DIR, filename)
+        async with aiofiles.open(filepath, 'wb') as f:
+            content = await image.read()
+            await f.write(content)
+        recipe.image_path = f"/uploads/{filename}"
+
+    recipe.title = title
+    recipe.ingredients = ingredients
+    recipe.shopping_list = shopping_list
+    recipe.cooking_method = cooking_method
+    recipe.servings = servings
+    recipe.extra_info = extra_info if extra_info else None
+    recipe.kbju_calculated = False  # Reset, will recalculate
+
+    await db.commit()
+    await db.refresh(recipe)
+
+    from app.config import settings
+    background_tasks.add_task(run_kbju_calculation, recipe.id, settings.DATABASE_URL)
+
+    return recipe
+
+
+@router.delete("/{recipe_id}")
+async def delete_recipe(recipe_id: int, db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
+    result = await db.execute(select(Recipe).where(Recipe.id == recipe_id))
+    recipe = result.scalar_one_or_none()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    if recipe.image_path:
+        old_path = "/app" + recipe.image_path
+        if os.path.exists(old_path):
+            os.remove(old_path)
+    await db.delete(recipe)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.get("/{recipe_id}/kbju-status")
+async def kbju_status(recipe_id: int, db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
+    """Lightweight endpoint for polling KBJU calculation status."""
+    result = await db.execute(
+        select(Recipe.kbju_calculated, Recipe.calories, Recipe.proteins, Recipe.fats, Recipe.carbs)
+        .where(Recipe.id == recipe_id)
+    )
+    row = result.first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return {
+        "kbju_calculated": row.kbju_calculated,
+        "calories": row.calories,
+        "proteins": row.proteins,
+        "fats": row.fats,
+        "carbs": row.carbs,
+    }
+
+
+@router.post("/{recipe_id}/recalculate")
+async def recalculate_kbju(
+    recipe_id: int,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    result = await db.execute(select(Recipe).where(Recipe.id == recipe_id))
+    recipe = result.scalar_one_or_none()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    recipe.kbju_calculated = False
+    await db.commit()
+    from app.config import settings
+    background_tasks.add_task(run_kbju_calculation, recipe.id, settings.DATABASE_URL)
+    return {"ok": True, "message": "КБЖУ пересчитывается..."}
