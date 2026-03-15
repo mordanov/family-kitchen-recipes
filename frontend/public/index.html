@@ -629,6 +629,168 @@ select.form-control {
 @media (max-width: 700px) {
   #warehouse-content > div { grid-template-columns: 1fr !important; }
 }
+
+/* ─── FAMILY MEMBERS ─── */
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+.member-card {
+  background: white;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: all 0.25s;
+  display: flex;
+  flex-direction: column;
+}
+.member-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-hover);
+}
+.member-card-accent {
+  height: 6px;
+  flex-shrink: 0;
+}
+.member-card-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+.member-avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--c-border);
+  flex-shrink: 0;
+}
+.member-avatar-placeholder {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: white;
+  flex-shrink: 0;
+}
+.member-top {
+  display: flex; align-items: center; gap: 16px;
+}
+.member-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.2;
+}
+.member-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.member-stat {
+  background: var(--c-surface2);
+  border-radius: 10px;
+  padding: 8px 6px;
+  text-align: center;
+}
+.member-stat .sv { font-size: 16px; font-weight: 800; color: var(--c-primary); display: block; }
+.member-stat .sl { font-size: 10px; color: var(--c-text-muted); font-weight: 600; text-transform: uppercase; }
+.diet-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px; font-weight: 700;
+  background: var(--c-surface2);
+  color: var(--c-text-muted);
+}
+.diet-badge.gain  { background: #E8F8E8; color: #27ae60; }
+.diet-badge.loss  { background: #FFE8E8; color: var(--c-danger); }
+.diet-badge.maintain { background: #E8F0FF; color: #3b82f6; }
+.member-prefs {
+  font-size: 12px; color: var(--c-text-muted); line-height: 1.6;
+}
+.member-card-actions {
+  display: flex; gap: 6px; justify-content: flex-end;
+  padding: 12px 20px;
+  border-top: 1px solid var(--c-border);
+}
+
+/* color picker row */
+.color-row {
+  display: flex; align-items: center; gap: 12px;
+}
+.color-swatch {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 2px solid var(--c-border);
+  cursor: pointer;
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+}
+.color-swatch input[type=color] {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer;
+  width: 100%; height: 100%; padding: 0; border: none;
+}
+.preset-colors {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.preset-color {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.preset-color:hover { transform: scale(1.2); }
+.preset-color.selected { border-color: var(--c-text); }
+
+/* preferences modal */
+.prefs-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.prefs-col h4 {
+  font-weight: 800; font-size: 14px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--c-border);
+}
+.prefs-list {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pref-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--c-surface2);
+  font-size: 14px; font-weight: 600;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s;
+  user-select: none;
+}
+.pref-item:hover { border-color: var(--c-primary); }
+.pref-item.preferred { background: #E8F8E8; border-color: #27ae60; color: #1a6b3a; }
+.pref-item.disliked  { background: #FFE8E8; border-color: var(--c-danger); color: #8b1a1a; }
+.pref-search {
+  width: 100%; padding: 8px 12px;
+  border: 2px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14px; outline: none;
+  margin-bottom: 8px;
+}
+.pref-search:focus { border-color: var(--c-primary); }
 </style>
 </head>
 <body>
@@ -673,6 +835,9 @@ select.form-control {
       </button>
       <button class="nav-item" data-page="warehouse">
         <span class="nav-icon">🏪</span> Склад
+      </button>
+      <button class="nav-item" data-page="members">
+        <span class="nav-icon">👨‍👩‍👧</span> Семья
       </button>
       <button class="nav-item" data-page="settings">
         <span class="nav-icon">⚙️</span> Настройки
@@ -743,6 +908,17 @@ select.form-control {
         <h1 class="page-title">История <span>меню</span></h1>
       </div>
       <div id="history-content"></div>
+    </div>
+
+    <!-- MEMBERS PAGE -->
+    <div class="page" id="page-members">
+      <div class="page-header">
+        <h1 class="page-title">Члены <span>семьи</span></h1>
+        <button class="btn btn-primary" onclick="MembersPage.openCreate()">+ Добавить</button>
+      </div>
+      <div id="members-grid" class="members-grid">
+        <div class="spinner"></div>
+      </div>
     </div>
   </main>
 </div>
@@ -876,6 +1052,107 @@ select.form-control {
 <!-- Toast Container -->
 <div class="toast-container" id="toast-container"></div>
 
+<!-- Member Form Modal -->
+<div class="modal-backdrop" id="modal-member-form">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h2 id="modal-member-title">Новый член семьи</h2>
+      <button class="modal-close" onclick="MembersPage.closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="member-id"/>
+      <div class="form-group">
+        <label class="form-label">Имя *</label>
+        <input type="text" class="form-control" id="member-name" placeholder="Имя члена семьи"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Дата рождения</label>
+          <input type="date" class="form-control" id="member-birth-date"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Вес (кг)</label>
+          <input type="number" class="form-control" id="member-weight" min="1" max="499" step="0.1" placeholder="70.0"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Пол</label>
+          <select class="form-control" id="member-gender">
+            <option value="">— не указан —</option>
+            <option value="male">👨 Мужской</option>
+            <option value="female">👩 Женский</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Модель питания</label>
+          <select class="form-control" id="member-diet">
+            <option value="weight_maintain">⚖️ Поддержание веса</option>
+            <option value="weight_loss">📉 Снижение веса</option>
+            <option value="weight_gain">📈 Набор веса</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Цвет</label>
+        <div class="color-row">
+          <div class="color-swatch" id="member-color-swatch">
+            <input type="color" id="member-color-picker" oninput="MembersPage.onColorPick(this.value)"/>
+          </div>
+          <div class="preset-colors" id="member-preset-colors"></div>
+        </div>
+        <input type="hidden" id="member-color" value="#FF6B35"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Фото</label>
+        <div class="image-upload-area" id="member-photo-area">
+          <input type="file" id="member-photo-input" accept="image/*" onchange="MembersPage.previewPhoto(this)"/>
+          <div id="member-photo-placeholder">
+            <div style="font-size:32px">📷</div>
+            <div style="font-weight:700;margin-top:8px">Нажмите или перетащите фото</div>
+            <div style="font-size:13px;color:var(--c-text-muted);margin-top:4px">JPG, PNG, WebP</div>
+          </div>
+          <img id="member-photo-preview" class="image-preview" style="display:none"/>
+        </div>
+        <div id="member-photo-remove" style="display:none;margin-top:8px">
+          <button class="btn btn-danger btn-sm" type="button" onclick="MembersPage.removePhoto()">🗑️ Удалить фото</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="MembersPage.closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="MembersPage.saveMember()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Member Preferences Modal -->
+<div class="modal-backdrop" id="modal-member-prefs">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header">
+      <h2 id="modal-prefs-title">Предпочтения</h2>
+      <button class="modal-close" onclick="MembersPage.closePrefsModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="prefs-member-id"/>
+      <input type="text" class="pref-search" id="pref-search" placeholder="🔍 Фильтр рецептов..." oninput="MembersPage.filterPrefs(this.value)"/>
+      <div class="prefs-columns">
+        <div class="prefs-col">
+          <h4>❤️ Любимые рецепты</h4>
+          <div class="prefs-list" id="prefs-preferred-list"></div>
+        </div>
+        <div class="prefs-col">
+          <h4>💔 Нелюбимые рецепты</h4>
+          <div class="prefs-list" id="prefs-disliked-list"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="MembersPage.closePrefsModal()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
 <script src="/js/api.js"></script>
 <script src="/js/app.js"></script>
 <script src="/js/recipes.js"></script>
@@ -883,5 +1160,6 @@ select.form-control {
 <script src="/js/shopping.js"></script>
 <script src="/js/warehouse.js"></script>
 <script src="/js/settings.js"></script>
+<script src="/js/members.js"></script>
 </body>
 </html>

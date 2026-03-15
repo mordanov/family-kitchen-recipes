@@ -92,6 +92,7 @@ const App = (() => {
     if (page === 'history') HistoryPage.load();
     if (page === 'warehouse') WarehousePage.load();
     if (page === 'settings') SettingsPage.load();
+    if (page === 'members') MembersPage.load();
   }
 
   // ── Toasts ──

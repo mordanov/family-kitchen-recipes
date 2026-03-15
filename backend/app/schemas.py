@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
 from datetime import datetime, date
-from app.models import CookingMethod, MenuStatus
+from app.models import CookingMethod, MenuStatus, Gender, DietModel
 
 
 # Auth
@@ -160,6 +160,44 @@ class PreparedDishOut(BaseModel):
     added_on: date
     updated_at: datetime
     recipe: Optional[RecipeOut] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ─── Family Members ───
+
+class FamilyMemberCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    weight: Optional[float] = Field(None, gt=0, lt=500)
+    birth_date: Optional[date] = None
+    gender: Optional[Gender] = None
+    diet_model: Optional[DietModel] = DietModel.weight_maintain
+    color: str = Field(default="#FF6B35", max_length=20)
+
+
+class FamilyMemberUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    weight: Optional[float] = Field(None, gt=0, lt=500)
+    birth_date: Optional[date] = None
+    gender: Optional[Gender] = None
+    diet_model: Optional[DietModel] = None
+    color: Optional[str] = Field(None, max_length=20)
+
+
+class FamilyMemberOut(BaseModel):
+    id: int
+    name: str
+    weight: Optional[float] = None
+    birth_date: Optional[date] = None
+    gender: Optional[Gender] = None
+    diet_model: Optional[DietModel] = None
+    photo_path: Optional[str] = None
+    color: str
+    preferred_recipe_ids: List[int] = []
+    disliked_recipe_ids: List[int] = []
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True

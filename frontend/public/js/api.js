@@ -86,5 +86,16 @@ const API = (() => {
     setProductSynonyms: (aliases) => request('PUT', '/settings/warehouse/product-synonyms', { aliases }),
     getPhraseSynonyms:  () => request('GET', '/settings/warehouse/phrase-synonyms'),
     setPhraseSynonyms:  (aliases) => request('PUT', '/settings/warehouse/phrase-synonyms', { aliases }),
+
+    // Family members
+    listMembers:         ()                  => request('GET',    '/members/'),
+    getMember:           (id)                => request('GET',    `/members/${id}`),
+    createMember:        (fd)                => request('POST',   '/members/', fd, true),
+    updateMember:        (id, fd)            => request('PUT',    `/members/${id}`, fd, true),
+    deleteMember:        (id)                => request('DELETE', `/members/${id}`),
+    addPreferredRecipe:  (mid, rid)          => request('POST',   `/members/${mid}/preferred/${rid}`),
+    removePreferredRecipe: (mid, rid)        => request('DELETE', `/members/${mid}/preferred/${rid}`),
+    addDislikedRecipe:   (mid, rid)          => request('POST',   `/members/${mid}/disliked/${rid}`),
+    removeDislikedRecipe: (mid, rid)         => request('DELETE', `/members/${mid}/disliked/${rid}`),
   };
 })();
