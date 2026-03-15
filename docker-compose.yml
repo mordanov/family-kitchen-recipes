@@ -30,6 +30,8 @@ services:
       USER1_PASSWORD: ${USER1_PASSWORD}
       USER2_NAME: ${USER2_NAME}
       USER2_PASSWORD: ${USER2_PASSWORD}
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -56,3 +58,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:

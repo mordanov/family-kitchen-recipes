@@ -276,6 +276,26 @@ body {
 .kbju-item .kv { font-size: 14px; font-weight: 800; color: var(--c-primary); }
 .kbju-item .kl { font-size: 10px; color: var(--c-text-muted); font-weight: 600; text-transform: uppercase; }
 .kbju-pending { font-size: 12px; color: var(--c-text-muted); margin-top: 8px; font-style: italic; }
+.recipe-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.recipe-feedback-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+.recipe-feedback-chip.is-disliked {
+  border-style: dashed;
+}
 
 /* ─── MODAL ─── */
 .modal-backdrop {

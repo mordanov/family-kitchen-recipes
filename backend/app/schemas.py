@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Literal
 from datetime import datetime, date
 from app.models import CookingMethod, MenuStatus, Gender, DietModel
 
@@ -34,6 +34,13 @@ class RecipeUpdate(RecipeBase):
     pass
 
 
+class RecipeMemberFeedbackOut(BaseModel):
+    member_id: int
+    member_name: str
+    member_color: str
+    status: Literal["preferred", "disliked"]
+
+
 class RecipeOut(RecipeBase):
     id: int
     image_path: Optional[str] = None
@@ -42,6 +49,7 @@ class RecipeOut(RecipeBase):
     fats: Optional[float] = None
     carbs: Optional[float] = None
     kbju_calculated: bool = False
+    member_feedback: List[RecipeMemberFeedbackOut] = []
     created_at: datetime
     updated_at: datetime
 
