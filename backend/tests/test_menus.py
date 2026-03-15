@@ -83,9 +83,10 @@ async def test_get_shopping_list_skips_cooked_items_and_deduplicates_recipe_titl
 
     shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
 
-    assert shopping == {
-        "menu_title": "Семейное меню",
-        "shopping_lists": {
-            "Суп": "картофель\nморковь",
-        },
+    assert shopping["menu_title"] == "Семейное меню"
+    assert shopping["shopping_lists"] == {
+        "Суп": "картофель\nморковь",
     }
+    assert "combined_list" in shopping
+    assert "картофель" in shopping["combined_list"]
+    assert "мука" not in shopping["combined_list"]  # пирог помечен как приготовленный
