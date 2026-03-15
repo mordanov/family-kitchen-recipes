@@ -43,6 +43,31 @@ http://localhost
 
 ---
 
+## ✅ Тесты
+
+### Frontend
+```bash
+cd frontend
+npm install
+npm run test:run
+```
+
+### Backend
+```bash
+cd backend
+python3 -m pip install -r requirements.txt
+python3 -m pytest -q
+```
+
+Покрыты базовые unit-тесты для:
+- авторизации и JWT на backend
+- расчёта КБЖУ и fallback-логики
+- правил меню и списка покупок
+- API-клиента на frontend
+- логики входа, навигации и страницы меню
+
+---
+
 ## 📦 Структура проекта
 ```
 family-recipes/
