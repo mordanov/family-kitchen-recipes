@@ -51,7 +51,13 @@ jobs:
           node-version: "20"
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo "package-lock.json is missing, falling back to npm install"
+            npm install
+          fi
 
       - name: Run frontend tests
         run: npm run test:run
@@ -135,4 +141,3 @@ jobs:
             exit 1
           fi
           EOF
-
