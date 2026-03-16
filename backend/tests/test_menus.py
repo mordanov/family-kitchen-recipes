@@ -114,7 +114,7 @@ async def test_get_shopping_list_splits_in_stock_and_to_buy_and_returns_prepared
 
     shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
 
-    assert "капуста 400 г" in shopping["in_stock_list"]
+    assert "капуста - 400г" in shopping["in_stock_list"]
     assert "морковь 2 шт" in shopping["to_buy_list"]
     assert shopping["prepared_items"]
     assert shopping["prepared_items"][0]["recipe_title"] == "Суп"
@@ -213,6 +213,191 @@ async def test_get_shopping_list_applies_custom_aliases_from_settings(session):
 
     assert "цуккини 2 шт" in shopping["in_stock_list"]
     assert "чеснок 2 зубчика" in shopping["to_buy_list"]
+
+
+@pytest.mark.asyncio
+async def test_get_shopping_list_groups_to_buy_lines_with_synonyms(session):
+    menu = Menu(title="Группировка покупок", weeks=1, status=MenuStatus.active)
+    recipe = Recipe(
+        title="Овощное ассорти",
+        ingredients="овощи",
+        shopping_list="томаты 2 шт\nпомидоры 1 шт\nбаклажаны 2 шт",
+        cooking_method=CookingMethod.stewing,
+        servings=2,
+    )
+    session.add_all([menu, recipe])
+    await session.commit()
+    await session.refresh(menu)
+    await session.refresh(recipe)
+
+    session.add(MenuItem(menu_id=menu.id, recipe_id=recipe.id, position=0, week_number=1, is_cooked=False))
+    await session.commit()
+
+    shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
+
+    grouped_lines = [line for line in shopping["to_buy_list"].splitlines() if line.strip()]
+    assert "помидор - 3шт" in grouped_lines
+    assert "баклажан - 2шт" in grouped_lines
+
+
+@pytest.mark.asyncio
+async def test_get_shopping_list_sums_same_product_amounts_to_single_line(session):
+    menu = Menu(title="Сумма картофеля", weeks=1, status=MenuStatus.active)
+    recipe = Recipe(
+        title="Драники и пюре",
+        ingredients="картофель",
+        shopping_list="картофель — 600 г\nкартофель — 300 г\nкартофель — 500 г\nкартофель — 700 г",
+        cooking_method=CookingMethod.frying,
+        servings=4,
+    )
+    session.add_all([menu, recipe])
+    await session.commit()
+    await session.refresh(menu)
+    await session.refresh(recipe)
+
+    session.add(MenuItem(menu_id=menu.id, recipe_id=recipe.id, position=0, week_number=1, is_cooked=False))
+    await session.commit()
+
+    shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
+
+    grouped_lines = [line for line in shopping["to_buy_list"].splitlines() if line.strip()]
+    assert "картофель - 2100г" in grouped_lines
+
+
+@pytest.mark.asyncio
+async def test_get_shopping_list_keeps_piece_units_for_in_stock_and_to_buy(session):
+    menu = Menu(title="Штуки в списке", weeks=1, status=MenuStatus.active)
+    recipe = Recipe(
+        title="Омлет и салат",
+        ingredients="яйца и овощи",
+        shopping_list="яйца 2 шт.\nпомидоры 4 шт.\nогурцы 3 штуки",
+        cooking_method=CookingMethod.raw,
+        servings=2,
+    )
+    session.add_all([
+        menu,
+        recipe,
+        StockItem(name="яйцо", quantity="10 шт"),
+        StockItem(name="огурец", quantity="5 ед."),
+    ])
+    await session.commit()
+    await session.refresh(menu)
+    await session.refresh(recipe)
+
+    session.add(MenuItem(menu_id=menu.id, recipe_id=recipe.id, position=0, week_number=1, is_cooked=False))
+    await session.commit()
+
+    shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
+
+    in_stock_lines = [line for line in shopping["in_stock_list"].splitlines() if line.strip()]
+    to_buy_lines = [line for line in shopping["to_buy_list"].splitlines() if line.strip()]
+
+    assert "яйцо - 10шт" in in_stock_lines
+    assert "огурец - 5шт" in in_stock_lines
+    assert "помидор - 4шт" in to_buy_lines
+
+
+@pytest.mark.asyncio
+async def test_get_shopping_list_prefers_pieces_when_line_contains_piece_and_grams(session):
+    menu = Menu(title="Приоритет штук", weeks=1, status=MenuStatus.active)
+    recipe = Recipe(
+        title="Лук для жарки",
+        ingredients="лук",
+        shopping_list="лук 1 шт (120 г)\nлук 2 шт (200 г)",
+        cooking_method=CookingMethod.frying,
+        servings=2,
+    )
+    session.add_all([menu, recipe])
+    await session.commit()
+    await session.refresh(menu)
+    await session.refresh(recipe)
+
+    session.add(MenuItem(menu_id=menu.id, recipe_id=recipe.id, position=0, week_number=1, is_cooked=False))
+    await session.commit()
+
+    shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
+
+    grouped_lines = [line for line in shopping["to_buy_list"].splitlines() if line.strip()]
+    assert "лук - 3шт" in grouped_lines
+
+
+@pytest.mark.asyncio
+async def test_get_shopping_list_uses_stock_piece_quantity_for_in_stock_display(session):
+    menu = Menu(title="Лук в штуках на складе", weeks=1, status=MenuStatus.active)
+    recipe = Recipe(
+        title="Суп луковый",
+        ingredients="лук",
+        shopping_list="лук 1500 г\nлук 1200 г",
+        cooking_method=CookingMethod.boiling,
+        servings=4,
+    )
+    session.add_all([
+        menu,
+        recipe,
+        StockItem(name="лук", quantity="10 шт"),
+    ])
+    await session.commit()
+    await session.refresh(menu)
+    await session.refresh(recipe)
+
+    session.add(MenuItem(menu_id=menu.id, recipe_id=recipe.id, position=0, week_number=1, is_cooked=False))
+    await session.commit()
+
+    shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
+    in_stock_lines = [line for line in shopping["in_stock_list"].splitlines() if line.strip()]
+
+    assert "лук - 10шт" in in_stock_lines
+
+
+@pytest.mark.asyncio
+async def test_get_shopping_list_preserves_multiword_ingredient_name(session):
+    menu = Menu(title="Многословные ингредиенты", weeks=1, status=MenuStatus.active)
+    recipe = Recipe(
+        title="Курица с рисом",
+        ingredients="куриное филе",
+        shopping_list="куриное филе 600 г\nкуриное филе 400 г",
+        cooking_method=CookingMethod.stewing,
+        servings=4,
+    )
+    session.add_all([menu, recipe])
+    await session.commit()
+    await session.refresh(menu)
+    await session.refresh(recipe)
+
+    session.add(MenuItem(menu_id=menu.id, recipe_id=recipe.id, position=0, week_number=1, is_cooked=False))
+    await session.commit()
+
+    shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
+    to_buy_lines = [line for line in shopping["to_buy_list"].splitlines() if line.strip()]
+
+    assert "куриное филе - 1000г" in to_buy_lines
+    assert not any(line.startswith("куриное -") for line in to_buy_lines)
+
+
+@pytest.mark.asyncio
+async def test_get_shopping_list_scales_amounts_per_portion_with_round_up(session):
+    menu = Menu(title="Порционный расчет", weeks=1, status=MenuStatus.active)
+    recipe = Recipe(
+        title="Рис с курицей",
+        ingredients="рис\nкуриное филе",
+        shopping_list="рис 1000 г\nкуриное филе 750 г",
+        cooking_method=CookingMethod.stewing,
+        servings=6,
+    )
+    session.add_all([menu, recipe])
+    await session.commit()
+    await session.refresh(menu)
+    await session.refresh(recipe)
+
+    session.add(MenuItem(menu_id=menu.id, recipe_id=recipe.id, position=0, week_number=1, is_cooked=False))
+    await session.commit()
+
+    shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
+    to_buy_lines = [line for line in shopping["to_buy_list"].splitlines() if line.strip()]
+
+    # 1000/6 -> 166.66 => 167, 750/6 -> 125 exactly
+    assert "рис - 167г" in to_buy_lines
+    assert "куриное филе - 125г" in to_buy_lines
 
 
 @pytest.mark.asyncio

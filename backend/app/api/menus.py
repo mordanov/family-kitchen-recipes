@@ -2,6 +2,7 @@ from typing import List
 import json
 import re
 import random
+import math
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -90,6 +91,10 @@ def _canonical_product_token(token: str, product_synonyms: dict[str, str]) -> st
     return product_synonyms.get(token, token)
 
 
+def _looks_like_adjective(token: str) -> bool:
+    return bool(re.search(r"(ый|ий|ой|ая|яя|ое|ее|ые|ие|ого|его|ому|ему|ым|им|ую|юю|ых|их|ыми|ими|ом|ем)$", token))
+
+
 def _extract_product_key(
     line: str,
     product_synonyms: dict[str, str],
@@ -108,14 +113,23 @@ def _extract_product_key(
             return canonical
 
     tokens = [t for t in text.split() if t]
+    meaningful: list[str] = []
 
     for token in tokens:
         if re.fullmatch(r"\d+(?:[\.,]\d+)?", token):
             continue
         if token in UNIT_TOKENS or token in DESCRIPTOR_TOKENS:
             continue
-        return _canonical_product_token(token, product_synonyms)
-    return ""
+        meaningful.append(token)
+
+    if not meaningful:
+        return ""
+
+    if len(meaningful) >= 2 and _looks_like_adjective(meaningful[0]):
+        phrase_key = f"{_canonical_product_token(meaningful[0], product_synonyms)} {_canonical_product_token(meaningful[1], product_synonyms)}"
+        return phrase_synonyms.get(phrase_key, phrase_key)
+
+    return _canonical_product_token(meaningful[0], product_synonyms)
 
 
 def _load_aliases(raw: str | None) -> dict[str, str]:
@@ -469,6 +483,153 @@ async def close_menu(menu_id: int, db: AsyncSession = Depends(get_db), _=Depends
     return _menu_to_out(result.scalar_one())
 
 
+UNIT_NORMALIZATION: dict[str, tuple[str, float]] = {
+    "г": ("г", 1.0),
+    "гр": ("г", 1.0),
+    "грамм": ("г", 1.0),
+    "грамма": ("г", 1.0),
+    "граммов": ("г", 1.0),
+    "кг": ("г", 1000.0),
+    "килограмм": ("г", 1000.0),
+    "килограмма": ("г", 1000.0),
+    "килограммов": ("г", 1000.0),
+    "мл": ("мл", 1.0),
+    "л": ("мл", 1000.0),
+    "литр": ("мл", 1000.0),
+    "литра": ("мл", 1000.0),
+    "литров": ("мл", 1000.0),
+    "шт": ("шт", 1.0),
+    "штука": ("шт", 1.0),
+    "штуки": ("шт", 1.0),
+    "штук": ("шт", 1.0),
+    "ед": ("шт", 1.0),
+    "единица": ("шт", 1.0),
+    "единицы": ("шт", 1.0),
+    "единиц": ("шт", 1.0),
+}
+
+
+def _parse_amount_and_unit(line: str) -> tuple[float, str] | None:
+    text = line.strip().lower().replace("ё", "е")
+    matches = re.findall(r"(\d+(?:[.,]\d+)?)\s*([a-zа-я.]+)", text)
+    if not matches:
+        return None
+
+    parsed_candidates: list[tuple[float, str]] = []
+    for raw_amount, raw_unit in matches:
+        unit_token = re.sub(r"[^a-zа-я]", "", raw_unit)
+        normalized = UNIT_NORMALIZATION.get(unit_token)
+        if not normalized:
+            continue
+        amount = float(raw_amount.replace(",", "."))
+        unit, factor = normalized
+        parsed_candidates.append((amount * factor, unit))
+
+    if not parsed_candidates:
+        return None
+
+    # If both pieces and weights are present (e.g. "1 шт (80 г)"), keep piece-based display.
+    for amount, unit in parsed_candidates:
+        if unit == "шт":
+            return amount, unit
+
+    return parsed_candidates[-1]
+
+
+def _format_amount(value: float) -> str:
+    rounded = round(value)
+    if abs(value - rounded) < 1e-9:
+        return str(int(rounded))
+    return f"{value:.2f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
+def _line_per_portion(
+    line: str,
+    servings: float,
+    product_synonyms: dict[str, str],
+    phrase_synonyms: dict[str, str],
+) -> str:
+    text = line.strip()
+    if not text:
+        return ""
+
+    parsed = _parse_amount_and_unit(text)
+    if not parsed or servings <= 0:
+        return text
+
+    amount, unit = parsed
+    per_portion = math.ceil(amount / servings)
+    product_key = _extract_product_key(text, product_synonyms, phrase_synonyms)
+
+    if not product_key:
+        return text
+    return f"{product_key} {per_portion} {unit}"
+
+
+def _group_shopping_lines(
+    lines: list[str],
+    product_synonyms: dict[str, str],
+    phrase_synonyms: dict[str, str],
+    display_overrides: dict[str, str] | None = None,
+) -> list[str]:
+    grouped: dict[str, dict[str, object]] = {}
+    order: list[str] = []
+    overrides = display_overrides or {}
+
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        product_key = _extract_product_key(line, product_synonyms, phrase_synonyms)
+        bucket_key = product_key or line.lower().replace("ё", "е")
+
+        if bucket_key not in grouped:
+            grouped[bucket_key] = {
+                "lines": [],
+                "amounts": {},
+                "parsed_count": 0,
+            }
+            order.append(bucket_key)
+
+        bucket = grouped[bucket_key]
+        bucket["lines"].append(line)
+
+        parsed = _parse_amount_and_unit(line)
+        if parsed:
+            amount, unit = parsed
+            amounts = bucket["amounts"]
+            amounts[unit] = float(amounts.get(unit, 0.0)) + amount
+            bucket["parsed_count"] = int(bucket["parsed_count"]) + 1
+
+    merged: list[str] = []
+    for key in order:
+        bucket = grouped[key]
+        variants = list(bucket["lines"])
+        amounts = dict(bucket["amounts"])
+        parsed_count = int(bucket["parsed_count"])
+
+        if key in overrides:
+            merged.append(overrides[key])
+            continue
+
+        if amounts and parsed_count == len(variants) and len(amounts) == 1 and key:
+            unit, total = next(iter(amounts.items()))
+            merged.append(f"{key} - {_format_amount(float(total))}{unit}")
+            continue
+
+        if len(variants) == 1:
+            merged.append(variants[0])
+            continue
+
+        if key:
+            merged.append(f"{key}: {' + '.join(variants)}")
+        else:
+            merged.append(" + ".join(variants))
+
+    return merged
+
+
 @router.get("/{menu_id}/shopping-list")
 async def get_shopping_list(menu_id: int, db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     result = await db.execute(
@@ -488,6 +649,18 @@ async def get_shopping_list(menu_id: int, db: AsyncSession = Depends(get_db), _=
         for key in [_extract_product_key(s.name or "", product_synonyms, phrase_synonyms)]
         if key
     }
+
+    in_stock_piece_overrides: dict[str, str] = {}
+    for stock_item in stock_items:
+        key = _extract_product_key(stock_item.name or "", product_synonyms, phrase_synonyms)
+        if not key:
+            continue
+        parsed_qty = _parse_amount_and_unit(stock_item.quantity or "")
+        if not parsed_qty:
+            continue
+        qty_amount, qty_unit = parsed_qty
+        if qty_unit == "шт":
+            in_stock_piece_overrides[key] = f"{key} - {_format_amount(qty_amount)}шт"
 
     prepared_result = await db.execute(
         select(PreparedDish).options(selectinload(PreparedDish.recipe))
@@ -513,25 +686,30 @@ async def get_shopping_list(menu_id: int, db: AsyncSession = Depends(get_db), _=
             if recipe.shopping_list:
                 if recipe.title not in shopping:
                     shopping[recipe.title] = recipe.shopping_list
-                lines = [l.strip() for l in recipe.shopping_list.splitlines() if l.strip()]
-                all_lines.extend(lines)
-
-    seen: set[str] = set()
-    unique_lines: list[str] = []
-    for line in all_lines:
-        key = line.lower()
-        if key not in seen:
-            seen.add(key)
-            unique_lines.append(line)
+                servings = float(recipe.servings or 1)
+                raw_lines = [l.strip() for l in recipe.shopping_list.splitlines() if l.strip()]
+                scaled_lines = [
+                    _line_per_portion(l, servings, product_synonyms, phrase_synonyms)
+                    for l in raw_lines
+                ]
+                all_lines.extend([l for l in scaled_lines if l])
 
     in_stock_lines: list[str] = []
     to_buy_lines: list[str] = []
-    for line in unique_lines:
+    for line in all_lines:
         key = _extract_product_key(line, product_synonyms, phrase_synonyms)
         if key and key in stock_names:
             in_stock_lines.append(line)
         else:
             to_buy_lines.append(line)
+
+    grouped_to_buy = _group_shopping_lines(to_buy_lines, product_synonyms, phrase_synonyms)
+    grouped_in_stock = _group_shopping_lines(
+        in_stock_lines,
+        product_synonyms,
+        phrase_synonyms,
+        display_overrides=in_stock_piece_overrides,
+    )
 
     prepared_summary = [
         {
@@ -546,9 +724,9 @@ async def get_shopping_list(menu_id: int, db: AsyncSession = Depends(get_db), _=
     return {
         "menu_title": menu.title,
         "shopping_lists": shopping,
-        "combined_list": "\n".join(unique_lines),
-        "to_buy_list": "\n".join(to_buy_lines),
-        "in_stock_list": "\n".join(in_stock_lines),
+        "combined_list": "\n".join(all_lines),
+        "to_buy_list": "\n".join(grouped_to_buy),
+        "in_stock_list": "\n".join(grouped_in_stock),
         "stock_items": [{"name": s.name, "quantity": s.quantity} for s in stock_items],
         "prepared_items": prepared_summary,
         "prepared_by_recipe_id": prepared_by_recipe_id,

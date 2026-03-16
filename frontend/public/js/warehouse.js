@@ -27,9 +27,9 @@ const WarehousePage = (() => {
   function render(stock, prepared) {
     const content = document.getElementById('warehouse-content');
     content.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="warehouse-grid">
         <section class="warehouse-section">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="warehouse-section-header">
             <h3>🥦 В наличии</h3>
             <button class="btn btn-primary btn-sm js-open-stock">+ Добавить</button>
           </div>
@@ -37,7 +37,7 @@ const WarehousePage = (() => {
         </section>
 
         <section class="warehouse-section">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="warehouse-section-header">
             <h3>🍱 Заготовки</h3>
             <button class="btn btn-primary btn-sm js-open-prepared">+ Добавить</button>
           </div>
@@ -116,7 +116,7 @@ const WarehousePage = (() => {
 
   function renderStockList(items) {
     if (!items.length) return '<p class="text-muted">Список пуст</p>';
-    return `<div>${items.map(item => `
+    return `<div class="warehouse-panel-list">${items.map(item => `
       <div class="warehouse-row">
         <div class="warehouse-row-info">
           <span class="warehouse-row-name">${item.name}</span>
@@ -124,13 +124,13 @@ const WarehousePage = (() => {
         </div>
         <div class="warehouse-row-actions">
           <button
-            class="btn btn-sm js-edit-stock"
+            class="btn btn-secondary btn-sm warehouse-action-btn js-edit-stock"
             data-id="${item.id}"
             data-name="${escAttr(item.name)}"
             data-quantity="${escAttr(item.quantity)}"
             data-added-on="${escAttr(item.added_on || '')}"
-          >✏️</button>
-          <button class="btn btn-sm js-delete-stock" style="color:var(--c-danger)" data-id="${item.id}">✕</button>
+          >✏️ Изменить</button>
+          <button class="btn btn-secondary btn-sm warehouse-action-btn warehouse-delete-btn js-delete-stock" data-id="${item.id}">🗑️ Удалить</button>
         </div>
       </div>
     `).join('')}</div>`;
@@ -138,7 +138,7 @@ const WarehousePage = (() => {
 
   function renderPreparedList(items) {
     if (!items.length) return '<p class="text-muted">Список пуст</p>';
-    return `<div>${items.map(item => `
+    return `<div class="warehouse-panel-list">${items.map(item => `
       <div class="warehouse-row">
         <div class="warehouse-row-info">
           <span class="warehouse-row-name">${item.recipe ? item.recipe.title : 'Рецепт удален'}</span>
@@ -146,14 +146,14 @@ const WarehousePage = (() => {
         </div>
         <div class="warehouse-row-actions">
           <button
-            class="btn btn-sm js-edit-prepared"
+            class="btn btn-secondary btn-sm warehouse-action-btn js-edit-prepared"
             data-id="${item.id}"
             data-recipe-id="${item.recipe_id}"
             data-servings="${item.servings}"
             data-note="${escAttr(item.note || '')}"
             data-added-on="${escAttr(item.added_on || '')}"
-          >✏️</button>
-          <button class="btn btn-sm js-delete-prepared" style="color:var(--c-danger)" data-id="${item.id}">✕</button>
+          >✏️ Изменить</button>
+          <button class="btn btn-secondary btn-sm warehouse-action-btn warehouse-delete-btn js-delete-prepared" data-id="${item.id}">🗑️ Удалить</button>
         </div>
       </div>
     `).join('')}</div>`;
