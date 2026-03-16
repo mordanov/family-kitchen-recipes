@@ -59,7 +59,7 @@ async def sample_member(session):
     member = FamilyMember(
         name="Алиса",
         weight=55.0,
-        age=30,
+        birth_date=date(1995, 6, 15),
         gender=Gender.female,
         diet_model=DietModel.weight_maintain,
         color="#4ECDC4",
@@ -68,4 +68,3 @@ async def sample_member(session):
     await session.commit()
     await session.refresh(member)
     return member
-

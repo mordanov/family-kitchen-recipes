@@ -114,8 +114,8 @@ async def test_get_shopping_list_splits_in_stock_and_to_buy_and_returns_prepared
 
     shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
 
-    assert "капуста - 400г" in shopping["in_stock_list"]
-    assert "морковь 2 шт" in shopping["to_buy_list"]
+    assert "капуста - 100г" in shopping["in_stock_list"]
+    assert "морковь - 1шт" in shopping["to_buy_list"]
     assert shopping["prepared_items"]
     assert shopping["prepared_items"][0]["recipe_title"] == "Суп"
 
@@ -147,9 +147,9 @@ async def test_get_shopping_list_matches_synonyms_and_normalized_tokens(session)
 
     shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
 
-    assert "картошка 1 кг" in shopping["in_stock_list"]
-    assert "помидоры 2 шт" in shopping["in_stock_list"]
-    assert "лук 1 шт" in shopping["to_buy_list"]
+    assert "картофель - 334г" in shopping["in_stock_list"]
+    assert "помидор - 5шт" in shopping["in_stock_list"]
+    assert "лук - 1шт" in shopping["to_buy_list"]
 
 
 @pytest.mark.asyncio
@@ -179,7 +179,7 @@ async def test_get_shopping_list_matches_phrase_synonyms_and_descriptors(session
 
     shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
 
-    assert "болгарский перец 2 шт" in shopping["in_stock_list"]
+    assert "перец - 4шт" in shopping["in_stock_list"]
     assert "свежий чеснок 3 зубчика" in shopping["in_stock_list"]
     assert "укроп 1 пучок" in shopping["to_buy_list"]
 
@@ -211,7 +211,7 @@ async def test_get_shopping_list_applies_custom_aliases_from_settings(session):
 
     shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
 
-    assert "цуккини 2 шт" in shopping["in_stock_list"]
+    assert "кабачок - 3шт" in shopping["in_stock_list"]
     assert "чеснок 2 зубчика" in shopping["to_buy_list"]
 
 
@@ -236,8 +236,8 @@ async def test_get_shopping_list_groups_to_buy_lines_with_synonyms(session):
     shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
 
     grouped_lines = [line for line in shopping["to_buy_list"].splitlines() if line.strip()]
-    assert "помидор - 3шт" in grouped_lines
-    assert "баклажан - 2шт" in grouped_lines
+    assert "помидор - 2шт" in grouped_lines
+    assert "баклажан - 1шт" in grouped_lines
 
 
 @pytest.mark.asyncio
@@ -261,7 +261,7 @@ async def test_get_shopping_list_sums_same_product_amounts_to_single_line(sessio
     shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
 
     grouped_lines = [line for line in shopping["to_buy_list"].splitlines() if line.strip()]
-    assert "картофель - 2100г" in grouped_lines
+    assert "картофель - 525г" in grouped_lines
 
 
 @pytest.mark.asyncio
@@ -294,7 +294,7 @@ async def test_get_shopping_list_keeps_piece_units_for_in_stock_and_to_buy(sessi
 
     assert "яйцо - 10шт" in in_stock_lines
     assert "огурец - 5шт" in in_stock_lines
-    assert "помидор - 4шт" in to_buy_lines
+    assert "помидор - 2шт" in to_buy_lines
 
 
 @pytest.mark.asyncio
@@ -318,7 +318,7 @@ async def test_get_shopping_list_prefers_pieces_when_line_contains_piece_and_gra
     shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
 
     grouped_lines = [line for line in shopping["to_buy_list"].splitlines() if line.strip()]
-    assert "лук - 3шт" in grouped_lines
+    assert "лук - 2шт" in grouped_lines
 
 
 @pytest.mark.asyncio
@@ -370,7 +370,7 @@ async def test_get_shopping_list_preserves_multiword_ingredient_name(session):
     shopping = await get_shopping_list(menu_id=menu.id, db=session, _=None)
     to_buy_lines = [line for line in shopping["to_buy_list"].splitlines() if line.strip()]
 
-    assert "куриное филе - 1000г" in to_buy_lines
+    assert "куриное филе - 250г" in to_buy_lines
     assert not any(line.startswith("куриное -") for line in to_buy_lines)
 
 

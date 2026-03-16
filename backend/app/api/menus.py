@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from datetime import datetime
+from datetime import datetime, UTC
 
 from app.database import get_db
 from app.models import Menu, MenuItem, MenuItemMember, MenuStatus, Recipe, StockItem, PreparedDish, AppSettings, FamilyMember
@@ -474,7 +474,7 @@ async def close_menu(menu_id: int, db: AsyncSession = Depends(get_db), _=Depends
     if not menu:
         raise HTTPException(status_code=404, detail="Menu not found")
     menu.status = MenuStatus.closed
-    menu.closed_at = datetime.utcnow()
+    menu.closed_at = datetime.now(UTC)
     await db.commit()
 
     result = await db.execute(

@@ -1,9 +1,13 @@
 from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, Date, ForeignKey, Enum as SAEnum, Table
 from sqlalchemy.orm import relationship
-from datetime import datetime, date
+from datetime import datetime, date, UTC
 import enum
 
 from app.database import Base
+
+
+def utcnow() -> datetime:
+    return datetime.now(UTC)
 
 
 class CookingMethod(str, enum.Enum):
@@ -21,7 +25,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(50), unique=True, nullable=False)
     hashed_password = Column(String(200), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
 
 class Recipe(Base):
@@ -42,8 +46,8 @@ class Recipe(Base):
     carbs = Column(Float, nullable=True)
     kbju_calculated = Column(Boolean, default=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     menu_items = relationship("MenuItem", back_populates="recipe")
 
@@ -59,7 +63,7 @@ class Menu(Base):
     title = Column(String(200), nullable=False)
     weeks = Column(Integer, nullable=False, default=1)
     status = Column(SAEnum(MenuStatus), nullable=False, default=MenuStatus.active)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
     closed_at = Column(DateTime, nullable=True)
 
     items = relationship("MenuItem", back_populates="menu", order_by="MenuItem.position", cascade="all, delete-orphan")
@@ -104,8 +108,8 @@ class StockItem(Base):
     name = Column(String(200), nullable=False)
     quantity = Column(String(100), nullable=False, default="")  # "400 г", "5 шт", "3 кг"
     added_on = Column(Date, nullable=False, default=date.today)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
 
 class PreparedDish(Base):
@@ -116,8 +120,8 @@ class PreparedDish(Base):
     servings = Column(Float, nullable=False, default=1.0)  # количество порций в наличии
     note = Column(String(500), nullable=True)
     added_on = Column(Date, nullable=False, default=date.today)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     recipe = relationship("Recipe")
 
@@ -168,8 +172,8 @@ class FamilyMember(Base):
     diet_model = Column(SAEnum(DietModel), nullable=True, default=DietModel.weight_maintain)
     photo_path = Column(String(500), nullable=True)
     color = Column(String(20), nullable=False, default="#FF6B35")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     preferred_recipes = relationship("Recipe", secondary=member_preferred_recipes, lazy="selectin")
     disliked_recipes = relationship("Recipe", secondary=member_disliked_recipes, lazy="selectin")
