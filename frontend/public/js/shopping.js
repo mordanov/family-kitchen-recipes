@@ -36,19 +36,67 @@ const ShoppingPage = (() => {
         return;
       }
 
+      const toBuyItems = (data.to_buy_list || data.combined_list || '')
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean);
+      const inStockItems = (data.in_stock_list || '')
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean);
+
+      const byDishHtml = entries.map(([title, list]) => `
+        <div class="shopping-recipe">
+          <h4>📌 ${title}</h4>
+          <pre>${list}</pre>
+        </div>`).join('<hr class="divider"/>');
+
+      const preparedItems = Array.isArray(data.prepared_items) ? data.prepared_items : [];
+
       content.innerHTML = `
         <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-          <div>
-            <p style="font-size:15px;color:var(--c-text-muted)">Список закупок по непросмотренным блюдам меню <strong>${data.menu_title}</strong></p>
-          </div>
+          <p style="font-size:15px;color:var(--c-text-muted)">Непросмотренные блюда меню <strong>${data.menu_title}</strong></p>
           <button class="btn btn-secondary" onclick="ShoppingPage.print()">🖨️ Распечатать</button>
         </div>
-        <div class="shopping-list-block" id="shopping-printable">
-          ${entries.map(([title, list]) => `
-            <div class="shopping-recipe">
-              <h4>📌 ${title}</h4>
-              <pre>${list}</pre>
-            </div>`).join('<hr class="divider"/>')}
+
+        <div id="shopping-printable">
+          <div class="shopping-list-block" style="margin-bottom:20px">
+            <h3 style="font-family:var(--font-display);margin-bottom:10px">🛒 Купить</h3>
+            <ul style="list-style:none;padding:0;margin:0">
+              ${toBuyItems.map(item => `
+                <li class="shopping-combined-item">
+                  <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 0;border-bottom:1px solid var(--c-surface2)">
+                    <input type="checkbox" style="width:18px;height:18px;accent-color:var(--c-primary);flex-shrink:0" onchange="this.closest('label').style.opacity=this.checked?'0.4':'1'">
+                    <span>${item}</span>
+                  </label>
+                </li>`).join('') || '<li style="color:var(--c-text-muted)">Ничего покупать не нужно 🎉</li>'}
+            </ul>
+          </div>
+
+          ${inStockItems.length ? `
+          <div class="shopping-list-block" style="margin-bottom:20px;background:#f0fff8">
+            <h3 style="font-family:var(--font-display);margin-bottom:10px">✅ Уже есть на складе</h3>
+            <ul style="list-style:none;padding:0;margin:0">
+              ${inStockItems.map(item => `<li style="padding:6px 0;border-bottom:1px solid #d8f3e5">${item}</li>`).join('')}
+            </ul>
+          </div>` : ''}
+
+          ${preparedItems.length ? `
+          <div class="shopping-list-block" style="margin-bottom:20px;background:#eef7ff">
+            <h3 style="font-family:var(--font-display);margin-bottom:10px">🍱 Заготовки в наличии</h3>
+            <ul style="list-style:none;padding:0;margin:0">
+              ${preparedItems.map(p => `<li style="padding:6px 0;border-bottom:1px solid #d9e7f8">${p.recipe_title || 'Рецепт'} — ${p.servings} порц.${p.note ? ' · ' + p.note : ''}</li>`).join('')}
+            </ul>
+          </div>` : ''}
+
+          <details style="margin-top:8px">
+            <summary style="cursor:pointer;font-size:15px;color:var(--c-text-muted);user-select:none;padding:8px 0">
+              📋 По блюдам
+            </summary>
+            <div class="shopping-list-block" style="margin-top:16px">
+              ${byDishHtml}
+            </div>
+          </details>
         </div>`;
     } catch (e) {
       content.innerHTML = `<p style="color:var(--c-danger)">Ошибка загрузки: ${e.message}</p>`;
@@ -63,9 +111,14 @@ const ShoppingPage = (() => {
       <meta charset="UTF-8"><title>Список покупок</title>
       <style>
         body{font-family:Arial,sans-serif;padding:24px;color:#111}
+        h3{font-size:18px;margin-bottom:16px}
         h4{font-size:16px;margin-bottom:8px;margin-top:20px;border-bottom:1px solid #ddd;padding-bottom:4px}
         pre{white-space:pre-wrap;font-size:14px;line-height:1.8}
         hr{border:none;border-top:1px solid #eee;margin:16px 0}
+        ul{list-style:none;padding:0;margin:0}
+        li label{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #eee;font-size:14px}
+        input[type=checkbox]{width:16px;height:16px;flex-shrink:0}
+        details summary{display:none}
       </style></head><body>${content}</body></html>`);
     win.document.close();
     win.print();

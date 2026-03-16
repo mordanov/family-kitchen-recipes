@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
-from datetime import datetime
-from app.models import CookingMethod, MenuStatus
+from typing import Optional, List, Dict
+from datetime import datetime, date
+from app.models import CookingMethod, MenuStatus, Gender, DietModel
 
 
 # Auth
@@ -19,10 +19,10 @@ class LoginRequest(BaseModel):
 # Recipe
 class RecipeBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
-    ingredients: str = ""
+    ingredients: str = Field(..., min_length=1)
     shopping_list: str = ""
     cooking_method: CookingMethod = CookingMethod.boiling
-    servings: int = Field(default=4, ge=1, le=16)
+    servings: int = Field(default=4, ge=1, le=50)
     extra_info: Optional[str] = None
 
 
@@ -104,3 +104,101 @@ class SettingOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class SynonymsUpdate(BaseModel):
+    aliases: Dict[str, str] = Field(default_factory=dict)
+
+
+class SynonymsOut(BaseModel):
+    aliases: Dict[str, str] = Field(default_factory=dict)
+
+
+# Stock
+class StockItemCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    quantity: str = Field(..., min_length=1, max_length=100)
+    added_on: date = Field(default_factory=date.today)
+
+
+class StockItemUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    quantity: Optional[str] = Field(None, min_length=1, max_length=100)
+    added_on: Optional[date] = None
+
+
+class StockItemOut(BaseModel):
+    id: int
+    name: str
+    quantity: str
+    added_on: date
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PreparedDishCreate(BaseModel):
+    recipe_id: int
+    servings: float = Field(..., gt=0)
+    note: Optional[str] = None
+    added_on: date = Field(default_factory=date.today)
+
+
+class PreparedDishUpdate(BaseModel):
+    recipe_id: Optional[int] = None
+    servings: Optional[float] = Field(None, gt=0)
+    note: Optional[str] = None
+    added_on: Optional[date] = None
+
+
+class PreparedDishOut(BaseModel):
+    id: int
+    recipe_id: int
+    servings: float
+    note: Optional[str] = None
+    added_on: date
+    updated_at: datetime
+    recipe: Optional[RecipeOut] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ─── Family Members ───
+
+class FamilyMemberCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    weight: Optional[float] = Field(None, gt=0, lt=500)
+    birth_date: Optional[date] = None
+    gender: Optional[Gender] = None
+    diet_model: Optional[DietModel] = DietModel.weight_maintain
+    color: str = Field(default="#FF6B35", max_length=20)
+
+
+class FamilyMemberUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    weight: Optional[float] = Field(None, gt=0, lt=500)
+    birth_date: Optional[date] = None
+    gender: Optional[Gender] = None
+    diet_model: Optional[DietModel] = None
+    color: Optional[str] = Field(None, max_length=20)
+
+
+class FamilyMemberOut(BaseModel):
+    id: int
+    name: str
+    weight: Optional[float] = None
+    birth_date: Optional[date] = None
+    gender: Optional[Gender] = None
+    diet_model: Optional[DietModel] = None
+    photo_path: Optional[str] = None
+    color: str
+    preferred_recipe_ids: List[int] = []
+    disliked_recipe_ids: List[int] = []
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+

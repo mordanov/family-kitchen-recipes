@@ -90,6 +90,9 @@ const App = (() => {
     if (page === 'menu') MenuPage.load();
     if (page === 'shopping') ShoppingPage.load();
     if (page === 'history') HistoryPage.load();
+    if (page === 'warehouse') WarehousePage.load();
+    if (page === 'settings') SettingsPage.load();
+    if (page === 'members') MembersPage.load();
   }
 
   // ── Toasts ──
@@ -105,7 +108,7 @@ const App = (() => {
 
   // ── Helpers ──
   function cookingMethodLabel(m) {
-    const map = { boiling: '🫕 Варка', frying: '🍳 Жарка', stewing: '♨️ Тушение', air_fryer: '💨 Аэрогриль', baking: '🔥 Запекание', raw: '🥗 Сырое' };
+    const map = { boiling: '🫕 Варка', frying: '🍳 Жарка', dry_frying: '🥘 Жарка на сухой сковороде', stewing: '♨️ Тушение', air_fryer: '💨 Аэрогриль', baking: '🔥 Запекание', raw: '🥗 Сырое' };
     return map[m] || m;
   }
 

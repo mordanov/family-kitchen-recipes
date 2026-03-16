@@ -68,5 +68,34 @@ const API = (() => {
     updateMenuItem:   (mid, iid, d) => request('PATCH',  `/menus/${mid}/items/${iid}`, d),
     removeMenuItem:   (mid, iid)    => request('DELETE', `/menus/${mid}/items/${iid}`),
     getShoppingList:  (id)          => request('GET',  `/menus/${id}/shopping-list`),
+
+    // Warehouse – stock items
+    listStock:        ()            => request('GET',    '/warehouse/items'),
+    createStock:      (data)        => request('POST',   '/warehouse/items', data),
+    updateStock:      (id, data)    => request('PATCH',  `/warehouse/items/${id}`, data),
+    deleteStock:      (id)          => request('DELETE', `/warehouse/items/${id}`),
+
+    // Warehouse – prepared dishes
+    listPrepared:     ()            => request('GET',    '/warehouse/prepared'),
+    createPrepared:   (data)        => request('POST',   '/warehouse/prepared', data),
+    updatePrepared:   (id, data)    => request('PATCH',  `/warehouse/prepared/${id}`, data),
+    deletePrepared:   (id)          => request('DELETE', `/warehouse/prepared/${id}`),
+
+    // Settings for warehouse matching
+    getProductSynonyms: () => request('GET', '/settings/warehouse/product-synonyms'),
+    setProductSynonyms: (aliases) => request('PUT', '/settings/warehouse/product-synonyms', { aliases }),
+    getPhraseSynonyms:  () => request('GET', '/settings/warehouse/phrase-synonyms'),
+    setPhraseSynonyms:  (aliases) => request('PUT', '/settings/warehouse/phrase-synonyms', { aliases }),
+
+    // Family members
+    listMembers:         ()                  => request('GET',    '/members/'),
+    getMember:           (id)                => request('GET',    `/members/${id}`),
+    createMember:        (fd)                => request('POST',   '/members/', fd, true),
+    updateMember:        (id, fd)            => request('PUT',    `/members/${id}`, fd, true),
+    deleteMember:        (id)                => request('DELETE', `/members/${id}`),
+    addPreferredRecipe:  (mid, rid)          => request('POST',   `/members/${mid}/preferred/${rid}`),
+    removePreferredRecipe: (mid, rid)        => request('DELETE', `/members/${mid}/preferred/${rid}`),
+    addDislikedRecipe:   (mid, rid)          => request('POST',   `/members/${mid}/disliked/${rid}`),
+    removeDislikedRecipe: (mid, rid)         => request('DELETE', `/members/${mid}/disliked/${rid}`),
   };
 })();
