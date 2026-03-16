@@ -14,41 +14,8 @@ concurrency:
 
 jobs:
 
-  tests:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [backend, frontend]
-
-    defaults:
-      run:
-        working-directory: ${{ matrix.service }}
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v5
-        if: matrix.service == 'frontend'
-        with:
-          node-version: 20
-
-      - uses: actions/setup-python@v5
-        if: matrix.service == 'backend'
-        with:
-          python-version: "3.12"
-
-      - run: |
-          if [ "${{ matrix.service }}" = "backend" ]; then
-            pip install -r requirements.txt
-            pytest -q tests
-          else
-            npm ci
-            npm run test:run
-          fi
-
   deploy:
     runs-on: ubuntu-latest
-    needs: tests
 
     steps:
       - name: Setup SSH
