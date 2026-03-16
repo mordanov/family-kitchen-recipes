@@ -52,6 +52,8 @@ npm install
 npm run test:run
 ```
 
+- Vitest использует ESM-конфиг: `frontend/vitest.config.mjs`
+
 ### Backend
 ```bash
 cd backend
@@ -67,6 +69,21 @@ python3 -m pytest -q
 - API-клиента на frontend (JWT-заголовок, 401-обработка, поиск рецептов)
 - логики входа, навигации, страницы меню и страницы покупок
 - склада: создание и обновление заготовок
+
+---
+
+## 🤖 CI/CD
+
+Workflow: `.github/workflows/deploy-vps.yml`
+
+- При `push` в `main` (или вручную) запускает матричные тесты:
+  - `backend`: `pytest -q tests`
+  - `frontend`: `npm ci && npm run test:run`
+- После успешных тестов выполняет deploy на VPS по SSH:
+  - обновляет репозиторий до `origin/main`
+  - `docker compose pull/build/up -d`
+  - проверяет `http://localhost/api/health`
+  - при провале health-check делает rollback на предыдущий commit
 
 ---
 
