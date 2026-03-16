@@ -1,19 +1,61 @@
 import os
 import uuid
+from collections import defaultdict
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 import aiofiles
 
 from app.database import get_db
-from app.models import Recipe, CookingMethod
-from app.schemas import RecipeOut
+from app.models import Recipe, CookingMethod, FamilyMember
+from app.schemas import RecipeOut, RecipeMemberFeedbackOut
 from app.auth import get_current_user
 from app.services.kbju import calculate_kbju
 
 router = APIRouter()
 UPLOAD_DIR = "/app/uploads"
+
+
+async def _collect_feedback_by_recipe(db: AsyncSession):
+    result = await db.execute(
+        select(FamilyMember)
+        .options(
+            selectinload(FamilyMember.preferred_recipes),
+            selectinload(FamilyMember.disliked_recipes),
+        )
+        .order_by(FamilyMember.name)
+    )
+    members = result.scalars().all()
+
+    feedback_by_recipe = defaultdict(dict)
+
+    for member in members:
+        for recipe in member.preferred_recipes or []:
+            feedback_by_recipe[recipe.id][member.id] = RecipeMemberFeedbackOut(
+                member_id=member.id,
+                member_name=member.name,
+                member_color=member.color,
+                status="preferred",
+            )
+
+        # If a recipe appears in both sets for one member, mark it as disliked.
+        for recipe in member.disliked_recipes or []:
+            feedback_by_recipe[recipe.id][member.id] = RecipeMemberFeedbackOut(
+                member_id=member.id,
+                member_name=member.name,
+                member_color=member.color,
+                status="disliked",
+            )
+
+    return {recipe_id: list(member_map.values()) for recipe_id, member_map in feedback_by_recipe.items()}
+
+
+def _build_recipe_out(recipe: Recipe, feedback_by_recipe: dict[int, list[RecipeMemberFeedbackOut]]) -> RecipeOut:
+    data = RecipeOut.model_validate(recipe)
+    data.member_feedback = feedback_by_recipe.get(recipe.id, [])
+    return data
 
 
 async def run_kbju_calculation(recipe_id: int, db_url: str):
@@ -72,7 +114,9 @@ async def list_recipes(
     if search:
         query = query.where(Recipe.title.ilike(f"%{search}%"))
     result = await db.execute(query)
-    return result.scalars().all()
+    recipes = result.scalars().all()
+    feedback_by_recipe = await _collect_feedback_by_recipe(db)
+    return [_build_recipe_out(recipe, feedback_by_recipe) for recipe in recipes]
 
 
 @router.post("/", response_model=RecipeOut)
@@ -115,7 +159,7 @@ async def create_recipe(
     from app.config import settings
     background_tasks.add_task(run_kbju_calculation, recipe.id, settings.DATABASE_URL)
 
-    return recipe
+    return _build_recipe_out(recipe, {})
 
 
 @router.get("/{recipe_id}", response_model=RecipeOut)
@@ -124,7 +168,8 @@ async def get_recipe(recipe_id: int, db: AsyncSession = Depends(get_db), _=Depen
     recipe = result.scalar_one_or_none()
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
-    return recipe
+    feedback_by_recipe = await _collect_feedback_by_recipe(db)
+    return _build_recipe_out(recipe, feedback_by_recipe)
 
 
 @router.put("/{recipe_id}", response_model=RecipeOut)
@@ -174,7 +219,8 @@ async def update_recipe(
     from app.config import settings
     background_tasks.add_task(run_kbju_calculation, recipe.id, settings.DATABASE_URL)
 
-    return recipe
+    feedback_by_recipe = await _collect_feedback_by_recipe(db)
+    return _build_recipe_out(recipe, feedback_by_recipe)
 
 
 @router.delete("/{recipe_id}")

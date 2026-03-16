@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Literal
 from datetime import datetime, date
 from app.models import CookingMethod, MenuStatus, Gender, DietModel
 
@@ -34,6 +34,13 @@ class RecipeUpdate(RecipeBase):
     pass
 
 
+class RecipeMemberFeedbackOut(BaseModel):
+    member_id: int
+    member_name: str
+    member_color: str
+    status: Literal["preferred", "disliked"]
+
+
 class RecipeOut(RecipeBase):
     id: int
     image_path: Optional[str] = None
@@ -42,6 +49,7 @@ class RecipeOut(RecipeBase):
     fats: Optional[float] = None
     carbs: Optional[float] = None
     kbju_calculated: bool = False
+    member_feedback: List[RecipeMemberFeedbackOut] = []
     created_at: datetime
     updated_at: datetime
 
@@ -50,33 +58,85 @@ class RecipeOut(RecipeBase):
 
 
 # Menu
-class MenuItemCreate(BaseModel):
+class MemberAssignmentCreate(BaseModel):
+    member_id: int
     recipe_id: int
+
+
+class MemberAssignmentOut(BaseModel):
+    id: int
+    member_id: int
+    recipe_id: int
+    member_name: Optional[str] = None
+    member_color: Optional[str] = None
+    recipe: Optional["RecipeOut"] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MenuItemCreate(BaseModel):
+    recipe_id: Optional[int] = None          # shared recipe for all; None = per-member only
     week_number: int = 1
-    day_of_week: Optional[int] = None
-    meal_type: Optional[str] = None
+    day_of_week: Optional[int] = None        # 1=Mon … 7=Sun
+    meal_type: Optional[str] = None          # breakfast / lunch / dinner
     note: Optional[str] = None
+    member_assignments: List[MemberAssignmentCreate] = []
 
 
 class MenuItemUpdate(BaseModel):
     is_cooked: Optional[bool] = None
     note: Optional[str] = None
     position: Optional[int] = None
+    meal_type: Optional[str] = None
+    day_of_week: Optional[int] = None
 
 
 class MenuItemOut(BaseModel):
     id: int
-    recipe_id: int
+    recipe_id: Optional[int] = None
     position: int
     week_number: int
     day_of_week: Optional[int] = None
     meal_type: Optional[str] = None
     is_cooked: bool
     note: Optional[str] = None
-    recipe: Optional[RecipeOut] = None
+    recipe: Optional["RecipeOut"] = None
+    member_assignments: List[MemberAssignmentOut] = []
 
     class Config:
         from_attributes = True
+
+
+class MenuKbjuTotals(BaseModel):
+    calories: float = 0.0
+    proteins: float = 0.0
+    fats: float = 0.0
+    carbs: float = 0.0
+
+
+class MenuKbjuByDay(BaseModel):
+    day_of_week: Optional[int] = None
+    calories: float = 0.0
+    proteins: float = 0.0
+    fats: float = 0.0
+    carbs: float = 0.0
+
+
+class MenuKbjuByMember(BaseModel):
+    member_id: int
+    member_name: str
+    member_color: Optional[str] = None
+    calories: float = 0.0
+    proteins: float = 0.0
+    fats: float = 0.0
+    carbs: float = 0.0
+
+
+class MenuKbjuSummary(BaseModel):
+    total: MenuKbjuTotals = MenuKbjuTotals()
+    by_day: List[MenuKbjuByDay] = []
+    by_member: List[MenuKbjuByMember] = []
 
 
 class MenuCreate(BaseModel):
@@ -92,6 +152,7 @@ class MenuOut(BaseModel):
     created_at: datetime
     closed_at: Optional[datetime] = None
     items: List[MenuItemOut] = []
+    kbju_summary: Optional[MenuKbjuSummary] = None
 
     class Config:
         from_attributes = True
@@ -112,6 +173,13 @@ class SynonymsUpdate(BaseModel):
 
 class SynonymsOut(BaseModel):
     aliases: Dict[str, str] = Field(default_factory=dict)
+
+
+class AutoFillRequest(BaseModel):
+    recipes_per_week: int = Field(default=5, ge=1, le=21)
+    use_meal_slots: bool = False
+    days: List[int] = Field(default_factory=list)   # 1=Mon…7=Sun; empty = all 7
+    meals: List[str] = Field(default_factory=list)  # breakfast/lunch/dinner; empty = all 3
 
 
 # Stock

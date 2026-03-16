@@ -200,7 +200,18 @@ body {
 .btn-danger { background: var(--c-danger); color: white; }
 .btn-danger:hover { background: #e03040; }
 .btn-sm { padding: 7px 14px; font-size: 13px; }
-.btn-icon { padding: 10px; border-radius: 10px; }
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
 
 /* ─── RECIPE GRID ─── */
 .search-bar {
@@ -276,6 +287,26 @@ body {
 .kbju-item .kv { font-size: 14px; font-weight: 800; color: var(--c-primary); }
 .kbju-item .kl { font-size: 10px; color: var(--c-text-muted); font-weight: 600; text-transform: uppercase; }
 .kbju-pending { font-size: 12px; color: var(--c-text-muted); margin-top: 8px; font-style: italic; }
+.recipe-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.recipe-feedback-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+.recipe-feedback-chip.is-disliked {
+  border-style: dashed;
+}
 
 /* ─── MODAL ─── */
 .modal-backdrop {
@@ -461,336 +492,347 @@ select.form-control {
 .menu-item-meta { font-size: 12px; color: var(--c-text-muted); }
 .menu-item-kbju { font-size: 12px; color: var(--c-primary); font-weight: 700; }
 
-.add-recipe-panel {
-  background: white;
-  border-radius: var(--radius);
-  padding: 20px;
-  border: 2px dashed var(--c-border);
-}
-.add-recipe-panel h4 { font-weight: 800; margin-bottom: 14px; }
-.recipe-picker-list {
-  display: flex; flex-direction: column; gap: 8px;
-  max-height: 320px; overflow-y: auto;
-}
-.recipe-picker-item {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  cursor: pointer; border: 2px solid transparent;
-  background: var(--c-surface2); transition: all 0.2s;
-}
-.recipe-picker-item:hover { border-color: var(--c-primary); background: #FFF5EE; }
-.recipe-picker-item .title { font-weight: 700; font-size: 14px; }
-.recipe-picker-item .meta { font-size: 12px; color: var(--c-text-muted); }
-
-/* ─── SHOPPING LIST ─── */
-.shopping-list-block {
-  background: white;
-  border-radius: var(--radius);
-  padding: 24px;
-  box-shadow: var(--shadow);
-}
-.shopping-recipe { margin-bottom: 24px; }
-.shopping-recipe h4 {
-  font-family: var(--font-display); font-size: 16px;
-  color: var(--c-primary); margin-bottom: 10px;
-  padding-bottom: 8px; border-bottom: 2px solid var(--c-border);
-}
-.shopping-recipe pre {
-  white-space: pre-wrap; font-family: var(--font-body);
-  font-size: 14px; line-height: 1.8; color: var(--c-text);
-}
-
-/* ─── HISTORY ─── */
-.history-list { display: flex; flex-direction: column; gap: 12px; }
-.history-card {
-  background: white;
-  border-radius: var(--radius);
-  padding: 20px 24px;
-  box-shadow: var(--shadow);
-  display: flex; align-items: center; gap: 16px;
-}
-.history-card.closed { opacity: 0.7; }
-.history-card-info { flex: 1; }
-.history-card-title { font-weight: 800; font-size: 16px; margin-bottom: 4px; }
-.history-card-meta { font-size: 13px; color: var(--c-text-muted); }
-.progress-bar {
-  height: 8px; background: var(--c-border);
-  border-radius: 4px; overflow: hidden;
-  width: 120px; margin-top: 8px;
-}
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--c-primary), var(--c-secondary));
-  border-radius: 4px;
-  transition: width 0.5s;
-}
-
-/* ─── EMPTY STATES ─── */
-.empty-state {
-  text-align: center;
-  padding: 64px 32px;
-  color: var(--c-text-muted);
-}
-.empty-state .emoji { font-size: 64px; display: block; margin-bottom: 16px; }
-.empty-state h3 { font-family: var(--font-display); font-size: 22px; margin-bottom: 8px; color: var(--c-text); }
-.empty-state p { font-size: 15px; margin-bottom: 24px; }
-
-/* ─── TOAST ─── */
-.toast-container {
-  position: fixed; bottom: 24px; right: 24px;
-  display: flex; flex-direction: column; gap: 10px;
-  z-index: 999;
-}
-.toast {
-  background: var(--c-text);
-  color: white;
-  padding: 14px 20px;
-  border-radius: var(--radius-sm);
-  font-weight: 600; font-size: 14px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-  animation: slideInRight 0.3s ease;
-  display: flex; align-items: center; gap: 10px;
-  max-width: 320px;
-}
-.toast.success { border-left: 4px solid var(--c-success); }
-.toast.error { border-left: 4px solid var(--c-danger); }
-.toast.info { border-left: 4px solid var(--c-accent); }
-
-/* ─── LOADING ─── */
-.spinner {
-  width: 40px; height: 40px;
-  border: 4px solid var(--c-border);
-  border-top-color: var(--c-primary);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  margin: 48px auto;
-}
-.loading-overlay {
-  position: absolute; inset: 0;
-  background: rgba(255,255,255,0.8);
-  display: flex; align-items: center; justify-content: center;
-  border-radius: var(--radius); z-index: 10;
-}
-
-/* ─── ANIMATIONS ─── */
-@keyframes fadeIn { from{opacity:0} to{opacity:1} }
-@keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-@keyframes slideInRight { from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:translateX(0)} }
-@keyframes spin { to{transform:rotate(360deg)} }
-
-/* ─── MISC ─── */
-.divider { border: none; border-top: 2px solid var(--c-border); margin: 20px 0; }
-.text-muted { color: var(--c-text-muted); }
-.text-primary { color: var(--c-primary); }
-.fw-bold { font-weight: 800; }
-.mt-2 { margin-top: 8px; }
-.mb-0 { margin-bottom: 0; }
-.flex { display: flex; }
-.gap-2 { gap: 8px; }
-.items-center { align-items: center; }
-.flex-1 { flex: 1; }
-
-/* ─── WAREHOUSE ─── */
-.warehouse-section {
-  background: var(--c-surface);
-  border-radius: var(--radius);
-  border: 1px solid var(--c-border);
-  padding: 20px;
-  min-height: 200px;
-}
-.warehouse-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  background: var(--c-surface2);
-  margin-bottom: 8px;
-  gap: 12px;
-}
-.warehouse-row:hover { background: #FFE8D0; }
-.warehouse-row-info { flex: 1; min-width: 0; }
-.warehouse-row-name {
-  display: block;
-  font-weight: 700;
-  font-size: 15px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.warehouse-row-qty {
-  display: block;
-  font-size: 13px;
-  color: var(--c-text-muted);
-  margin-top: 2px;
-}
-.warehouse-row-actions { display: flex; gap: 6px; flex-shrink: 0; }
-@media (max-width: 700px) {
-  #warehouse-content > div { grid-template-columns: 1fr !important; }
-}
-
-/* ─── FAMILY MEMBERS ─── */
-.members-grid {
+/* Day x meal grid for slot-based menus */
+.meal-grid { display: flex; flex-direction: column; gap: 8px; }
+.meal-grid-header,
+.meal-grid-row {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 20px;
-}
-.member-card {
-  background: white;
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: var(--shadow);
-  transition: all 0.25s;
-  display: flex;
-  flex-direction: column;
-}
-.member-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-hover);
-}
-.member-card-accent {
-  height: 6px;
-  flex-shrink: 0;
-}
-.member-card-body {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  flex: 1;
-}
-.member-avatar {
-  width: 72px; height: 72px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid var(--c-border);
-  flex-shrink: 0;
-}
-.member-avatar-placeholder {
-  width: 72px; height: 72px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display);
-  font-size: 28px;
-  color: white;
-  flex-shrink: 0;
-}
-.member-top {
-  display: flex; align-items: center; gap: 16px;
-}
-.member-name {
-  font-family: var(--font-display);
-  font-size: 18px;
-  line-height: 1.2;
-}
-.member-stats {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 64px repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
-.member-stat {
-  background: var(--c-surface2);
-  border-radius: 10px;
-  padding: 8px 6px;
-  text-align: center;
-}
-.member-stat .sv { font-size: 16px; font-weight: 800; color: var(--c-primary); display: block; }
-.member-stat .sl { font-size: 10px; color: var(--c-text-muted); font-weight: 600; text-transform: uppercase; }
-.diet-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 12px; font-weight: 700;
-  background: var(--c-surface2);
+.meal-grid-meal-label,
+.meal-grid-day-label {
+  font-size: 12px;
+  font-weight: 700;
   color: var(--c-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-surface2);
+  border-radius: var(--radius-sm);
+  padding: 8px;
 }
-.diet-badge.gain  { background: #E8F8E8; color: #27ae60; }
-.diet-badge.loss  { background: #FFE8E8; color: var(--c-danger); }
-.diet-badge.maintain { background: #E8F0FF; color: #3b82f6; }
-.member-prefs {
-  font-size: 12px; color: var(--c-text-muted); line-height: 1.6;
-}
-.member-card-actions {
-  display: flex; gap: 6px; justify-content: flex-end;
-  padding: 12px 20px;
-  border-top: 1px solid var(--c-border);
-}
-
-/* color picker row */
-.color-row {
-  display: flex; align-items: center; gap: 12px;
-}
-.color-swatch {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  border: 2px solid var(--c-border);
-  cursor: pointer;
-  flex-shrink: 0;
-  overflow: hidden;
-  position: relative;
-}
-.color-swatch input[type=color] {
-  position: absolute; inset: 0;
-  opacity: 0; cursor: pointer;
-  width: 100%; height: 100%; padding: 0; border: none;
-}
-.preset-colors {
-  display: flex; gap: 6px; flex-wrap: wrap;
-}
-.preset-color {
-  width: 28px; height: 28px;
-  border-radius: 6px;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: transform 0.15s, border-color 0.15s;
-  flex-shrink: 0;
-}
-.preset-color:hover { transform: scale(1.2); }
-.preset-color.selected { border-color: var(--c-text); }
-
-/* preferences modal */
-.prefs-columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-.prefs-col h4 {
-  font-weight: 800; font-size: 14px;
-  margin-bottom: 10px;
-  padding-bottom: 6px;
-  border-bottom: 2px solid var(--c-border);
-}
-.prefs-list {
-  max-height: 320px;
-  overflow-y: auto;
+.meal-grid-corner { background: transparent; }
+.meal-grid-cell {
+  background: var(--c-surface2);
+  border-radius: var(--radius-sm);
+  min-height: 76px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.pref-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--c-surface2);
-  font-size: 14px; font-weight: 600;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.15s;
-  user-select: none;
+.meal-grid-empty {
+  color: var(--c-text-muted);
+  font-size: 13px;
+  text-align: center;
+  margin: auto;
 }
-.pref-item:hover { border-color: var(--c-primary); }
-.pref-item.preferred { background: #E8F8E8; border-color: #27ae60; color: #1a6b3a; }
-.pref-item.disliked  { background: #FFE8E8; border-color: var(--c-danger); color: #8b1a1a; }
+.slot-card {
+  background: white;
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.slot-card.cooked {
+  background: #F0FFF8;
+  border-color: var(--c-accent2);
+}
+.slot-card-check {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--c-border);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: white;
+}
+.slot-card-check.checked {
+  background: var(--c-success);
+  border-color: var(--c-success);
+  color: white;
+}
+.slot-card-body { flex: 1; }
+.slot-recipe-title { font-size: 13px; font-weight: 700; line-height: 1.3; }
+.slot-meta { font-size: 11px; color: var(--c-text-muted); margin-top: 2px; }
+.slot-remove-btn {
+  border: none;
+  background: transparent;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  font-size: 14px;
+}
+.slot-member-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.slot-member-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.slot-member-name { color: var(--c-text-muted); }
+
+.slot-quick-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.slot-quick-btn {
+  border: 1px solid var(--c-border);
+  background: var(--c-surface2);
+  color: var(--c-text);
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.slot-quick-btn:hover {
+  border-color: var(--c-primary);
+  background: #fff6ee;
+}
+
+/* ─── WAREHOUSE PAGE ─── */
+.warehouse-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.warehouse-section {
+  background: white;
+  border: 2px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+.warehouse-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.warehouse-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.warehouse-row {
+  border: 2px solid var(--c-border);
+  border-radius: 12px;
+  background: var(--c-surface2);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.warehouse-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.warehouse-row-name {
+  font-weight: 800;
+  line-height: 1.2;
+}
+.warehouse-row-qty {
+  color: var(--c-text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.warehouse-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.warehouse-action-btn {
+  white-space: nowrap;
+}
+.warehouse-delete-btn {
+  border-color: #ffc9cf;
+  color: var(--c-danger);
+}
+.warehouse-delete-btn:hover {
+  border-color: var(--c-danger);
+  background: #fff1f2;
+}
+
+/* ─── MEMBERS PAGE ─── */
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.member-card {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+.member-card:hover {
+  border-color: var(--c-primary);
+  transform: translateY(-1px);
+}
+.member-card-accent { height: 6px; }
+.member-card-body { padding: 14px; }
+.member-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.member-avatar,
+.member-avatar-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.member-avatar {
+  object-fit: cover;
+  border: 2px solid var(--c-border);
+}
+.member-avatar-placeholder {
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+.member-name { font-weight: 800; font-size: 16px; }
+.member-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.member-stat {
+  background: var(--c-surface2);
+  border-radius: 10px;
+  padding: 8px;
+  text-align: center;
+}
+.member-stat .sv { display: block; font-weight: 800; color: var(--c-primary); }
+.member-stat .sl { font-size: 11px; color: var(--c-text-muted); }
+.diet-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.diet-badge.gain { background: #E8FFF2; color: #1f8f57; }
+.diet-badge.loss { background: #FFECEC; color: #c0392b; }
+.diet-badge.maintain { background: #EEF3FF; color: #335caa; }
+.member-prefs {
+  margin-top: 10px;
+  color: var(--c-text-muted);
+  font-size: 12px;
+}
+.member-card-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
 .pref-search {
-  width: 100%; padding: 8px 12px;
+  width: 100%;
   border: 2px solid var(--c-border);
   border-radius: var(--radius-sm);
-  font-family: var(--font-body);
-  font-size: 14px; outline: none;
-  margin-bottom: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
 }
-.pref-search:focus { border-color: var(--c-primary); }
+.prefs-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.prefs-col h4 { margin-bottom: 8px; }
+.prefs-list {
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  background: #fff;
+}
+.pref-item {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--c-surface2);
+  cursor: pointer;
+  font-size: 13px;
+}
+.pref-item:last-child { border-bottom: none; }
+.pref-item.preferred { background: #EFFFF7; color: #1f8f57; font-weight: 700; }
+.pref-item.disliked { background: #FFF0F0; color: #b03a2e; font-weight: 700; }
+
+.color-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.color-swatch {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 2px solid var(--c-border);
+  position: relative;
+  overflow: hidden;
+}
+.color-swatch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.preset-colors {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.preset-color {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+.preset-color.selected { border-color: var(--c-text); }
+
+@media (max-width: 980px) {
+  .meal-grid-header,
+  .meal-grid-row { grid-template-columns: 54px repeat(3, minmax(0, 1fr)); }
+  .prefs-columns { grid-template-columns: 1fr; }
+  .warehouse-grid { grid-template-columns: 1fr; }
+  .warehouse-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .warehouse-row-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+}
+
+/* ...existing code... */
 </style>
 </head>
 <body>
@@ -872,6 +914,7 @@ select.form-control {
         <h1 class="page-title">Активное <span>меню</span></h1>
         <div style="display:flex;gap:10px">
           <button class="btn btn-secondary" onclick="MenuPage.openShoppingList()">🛒 Список покупок</button>
+          <button class="btn btn-secondary" onclick="MenuPage.openAutoFill()">🎲 Авто-подбор</button>
           <button class="btn btn-primary" onclick="MenuPage.openCreate()">+ Новое меню</button>
         </div>
       </div>
@@ -1034,6 +1077,83 @@ select.form-control {
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="MenuPage.closeCreate()">Отмена</button>
       <button class="btn btn-primary" onclick="MenuPage.createMenu()">Создать меню</button>
+    </div>
+  </div>
+</div>
+
+<!-- Auto-fill Menu Modal -->
+<div class="modal-backdrop" id="modal-auto-fill">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h2>🎲 Авто-подбор меню</h2>
+      <button class="modal-close" onclick="MenuPage.closeAutoFill()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--c-surface2);border-radius:var(--radius-sm);padding:14px;margin-bottom:20px;font-size:13px;line-height:1.7;border-left:4px solid var(--c-primary)">
+        <strong>Как работает авто-подбор:</strong><br>
+        🥇 Любимые блюда членов семьи + совпадение со складом<br>
+        🥈 Просто любимые блюда · 🥉 Нейтральные рецепты<br>
+        🔄 Рецепты прошлого меню — в конце каждой группы
+      </div>
+      <div class="form-group">
+        <label class="form-label">Название меню</label>
+        <input type="text" class="form-control" id="auto-menu-title" placeholder="Меню на март"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:1">
+          <label class="form-label">Количество недель</label>
+          <select class="form-control" id="auto-menu-weeks">
+            <option value="1">1 неделя</option>
+            <option value="2">2 недели</option>
+            <option value="3">3 недели</option>
+            <option value="4">4 недели</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:1" id="flat-mode-options">
+          <label class="form-label">Блюд в неделю</label>
+          <input type="number" class="form-control" id="auto-recipes-per-week" min="1" max="21" value="5"/>
+        </div>
+      </div>
+
+      <!-- Meal-slot mode toggle -->
+      <div style="border:1px solid var(--c-border);border-radius:var(--radius-sm);padding:14px;margin-top:4px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600">
+          <input type="checkbox" id="auto-use-meal-slots" onchange="MenuPage.toggleMealSlotsOptions()">
+          Режим завтрак / обед / ужин (по дням)
+        </label>
+        <div style="font-size:12px;color:var(--c-text-muted);margin-top:4px;margin-left:26px">
+          Каждый член семьи получает своё блюдо на каждый приём пищи
+        </div>
+
+        <div id="auto-meal-slots-options" style="display:none;margin-top:12px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px">Приёмы пищи:</div>
+          <div style="display:flex;gap:16px;margin-bottom:12px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="auto-meal-breakfast" checked> 🌅 Завтрак
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="auto-meal-lunch" checked> ☀️ Обед
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="auto-meal-dinner" checked> 🌙 Ужин
+            </label>
+          </div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px">Дни недели:</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="auto-day-1" checked>Пн</label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="auto-day-2" checked>Вт</label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="auto-day-3" checked>Ср</label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="auto-day-4" checked>Чт</label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="auto-day-5" checked>Пт</label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="auto-day-6" checked>Сб</label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="auto-day-7" checked>Вс</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="MenuPage.closeAutoFill()">Отмена</button>
+      <button class="btn btn-primary" onclick="MenuPage.createAutoMenu()">🎲 Подобрать меню</button>
     </div>
   </div>
 </div>

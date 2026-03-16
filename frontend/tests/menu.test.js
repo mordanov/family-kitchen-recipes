@@ -32,6 +32,9 @@ describe('MenuPage', () => {
     setGlobal('API', {
       getActiveMenu: vi.fn(),
       listRecipes: vi.fn(),
+      listPrepared: vi.fn().mockResolvedValue([]),
+      listStock: vi.fn().mockResolvedValue([]),
+      listMembers: vi.fn().mockResolvedValue([]),
       addMenuItem: vi.fn(),
       updateMenuItem: vi.fn(),
       removeMenuItem: vi.fn(),
@@ -53,7 +56,7 @@ describe('MenuPage', () => {
     expect(document.getElementById('menu-content').textContent).toContain('Создайте меню')
   })
 
-  it('filters the recipe picker by title after loading recipes', async () => {
+  it('renders compact shared-recipe select after loading recipes', async () => {
     window.API.getActiveMenu.mockResolvedValue({
       id: 7,
       title: 'Тестовое меню',
@@ -67,10 +70,10 @@ describe('MenuPage', () => {
     ])
 
     await window.MenuPage.load()
-    window.MenuPage.filterPicker('сыр')
 
-    const picker = document.getElementById('recipe-picker-list')
-    expect(picker.textContent).toContain('Сырники')
-    expect(picker.textContent).not.toContain('Борщ')
+    const select = document.getElementById('add-item-recipe-select')
+    expect(select).toBeTruthy()
+    expect(select.textContent).toContain('Сырники')
+    expect(select.textContent).toContain('Борщ')
   })
 })
