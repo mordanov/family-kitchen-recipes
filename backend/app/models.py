@@ -7,7 +7,8 @@ from app.database import Base
 
 
 def utcnow() -> datetime:
-    return datetime.now(UTC)
+    # PostgreSQL columns are TIMESTAMP WITHOUT TIME ZONE in current migrations.
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CookingMethod(str, enum.Enum):
@@ -177,4 +178,3 @@ class FamilyMember(Base):
 
     preferred_recipes = relationship("Recipe", secondary=member_preferred_recipes, lazy="selectin")
     disliked_recipes = relationship("Recipe", secondary=member_disliked_recipes, lazy="selectin")
-
