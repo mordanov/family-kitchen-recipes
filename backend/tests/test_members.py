@@ -1,4 +1,5 @@
 import pytest
+from datetime import date
 from sqlalchemy import select
 
 from app.api.members import (
@@ -19,7 +20,7 @@ async def test_create_member(session):
     member = await create_member(
         name="Борис",
         weight=80.0,
-        age=40,
+        birth_date=date(1985, 3, 10),
         gender=Gender.male,
         diet_model=DietModel.weight_loss,
         color="#FF6B35",
@@ -30,7 +31,7 @@ async def test_create_member(session):
     assert member.id is not None
     assert member.name == "Борис"
     assert member.weight == 80.0
-    assert member.age == 40
+    assert member.birth_date == date(1985, 3, 10)
     assert member.gender == Gender.male
     assert member.diet_model == DietModel.weight_loss
     assert member.preferred_recipe_ids == []
