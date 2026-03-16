@@ -57,8 +57,37 @@ const RecipesPage = (() => {
             <span class="badge">${r.servings} порц.</span>
           </div>
           ${kbju}
+          ${renderMemberFeedback(r)}
         </div>
       </div>`;
+  }
+
+  function toRgba(hex, alpha) {
+    if (!hex || typeof hex !== 'string') return `rgba(255,107,53,${alpha})`;
+    const clean = hex.replace('#', '').trim();
+    const norm = clean.length === 3
+      ? clean.split('').map(ch => ch + ch).join('')
+      : clean;
+    if (!/^[0-9a-fA-F]{6}$/.test(norm)) return `rgba(255,107,53,${alpha})`;
+    const r = parseInt(norm.slice(0, 2), 16);
+    const g = parseInt(norm.slice(2, 4), 16);
+    const b = parseInt(norm.slice(4, 6), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function renderMemberFeedback(recipe, compact = true) {
+    const feedback = recipe.member_feedback || [];
+    if (!feedback.length) return '';
+
+    const title = compact ? '' : '<div class="section-title" style="margin-top:10px">❤️ Предпочтения семьи</div>';
+    const chips = feedback.map(f => {
+      const color = f.member_color || '#FF6B35';
+      const icon = f.status === 'disliked' ? '💔' : '❤️';
+      const moodClass = f.status === 'disliked' ? 'is-disliked' : 'is-preferred';
+      return `<span class="recipe-feedback-chip ${moodClass}" style="border-color:${color};background:${toRgba(color, 0.14)};color:${color}">${icon} ${f.member_name}</span>`;
+    }).join('');
+
+    return `${title}<div class="recipe-feedback">${chips}</div>`;
   }
 
   function getRecipeEmoji(method) {
@@ -122,6 +151,7 @@ const RecipesPage = (() => {
             <span class="badge">${r.servings} порций</span>
             <span class="badge" style="font-size:11px;color:var(--c-text-muted)">Обновлён: ${App.formatDate(r.updated_at)}</span>
           </div>
+          ${renderMemberFeedback(r, false)}
           ${kbjuHtml}
         </div>
       </div>

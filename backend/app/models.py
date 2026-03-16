@@ -69,7 +69,7 @@ class MenuItem(Base):
     __tablename__ = "menu_items"
     id = Column(Integer, primary_key=True)
     menu_id = Column(Integer, ForeignKey("menus.id", ondelete="CASCADE"), nullable=False)
-    recipe_id = Column(Integer, ForeignKey("recipes.id", ondelete="CASCADE"), nullable=False)
+    recipe_id = Column(Integer, ForeignKey("recipes.id", ondelete="CASCADE"), nullable=True)  # None = per-member only
     position = Column(Integer, nullable=False, default=0)
     week_number = Column(Integer, nullable=False, default=1)
     day_of_week = Column(Integer, nullable=True)  # 1-7, optional
@@ -78,7 +78,23 @@ class MenuItem(Base):
     note = Column(String(500), nullable=True)
 
     menu = relationship("Menu", back_populates="items")
-    recipe = relationship("Recipe", back_populates="menu_items")
+    recipe = relationship("Recipe", back_populates="menu_items", foreign_keys=[recipe_id])
+    member_assignments = relationship(
+        "MenuItemMember", back_populates="menu_item", cascade="all, delete-orphan"
+    )
+
+
+class MenuItemMember(Base):
+    """Per-member recipe assignment within a menu slot (day + meal_type)."""
+    __tablename__ = "menu_item_members"
+    id = Column(Integer, primary_key=True)
+    menu_item_id = Column(Integer, ForeignKey("menu_items.id", ondelete="CASCADE"), nullable=False)
+    member_id = Column(Integer, ForeignKey("family_members.id", ondelete="CASCADE"), nullable=False)
+    recipe_id = Column(Integer, ForeignKey("recipes.id", ondelete="CASCADE"), nullable=False)
+
+    menu_item = relationship("MenuItem", back_populates="member_assignments")
+    member = relationship("FamilyMember")
+    recipe = relationship("Recipe")
 
 
 class StockItem(Base):
