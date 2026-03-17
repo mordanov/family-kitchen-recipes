@@ -13,18 +13,66 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: 'pip'
+
+      - name: Install backend dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run backend tests
+        run: pytest -q tests
+
+  test-frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: 'npm'
+          cache-dependency-path: frontend/package.json
+
+      - name: Install frontend dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Run frontend tests
+        run: npm run test:run
 
   deploy:
     runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
 
     steps:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
@@ -33,26 +81,26 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_PORT || 22 }}
-          VPS_PROJECT_DIR: ${{ secrets.VPS_PROJECT_DIR }}
+          VPS_RECIPES_DIR: ${{ secrets.VPS_RECIPES_DIR }}
+          VPS_WEB_FOLDERS_DIR: ${{ secrets.VPS_WEB_FOLDERS_DIR }}
           REPO: ${{ github.repository }}
           REF_NAME: ${{ github.ref_name }}
         run: |
-
-          # Pass runner env values as positional args to remote bash.
           ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" \
-            "bash -se -- '$REPO' '$REF_NAME' '$VPS_PROJECT_DIR'" << 'EOF'
+            "bash -se -- '$REPO' '$REF_NAME' '$VPS_RECIPES_DIR' '$VPS_WEB_FOLDERS_DIR'" << 'EOF'
 
           set -e
 
           REPO="$1"
           REF_NAME="$2"
-          VPS_PROJECT_DIR="$3"
+          RECIPES_DIR="${3:-$HOME/family-kitchen-recipes}"
+          WEB_FOLDERS_DIR="${4:-$HOME/web-folders}"
 
-          PROJECT_DIR=${VPS_PROJECT_DIR:-$HOME/family-kitchen-recipes}
           PREVIOUS_COMMIT=""
 
-          mkdir -p "$PROJECT_DIR"
-          cd "$PROJECT_DIR"
+          # --- Update family-kitchen-recipes repo ---
+          mkdir -p "$RECIPES_DIR"
+          cd "$RECIPES_DIR"
 
           if [ ! -d .git ]; then
             git clone "https://github.com/$REPO.git" .
@@ -64,14 +112,14 @@ jobs:
           git checkout "$REF_NAME"
           git reset --hard "origin/$REF_NAME"
 
-          echo "Building containers..."
+          # --- Rebuild shared stack from web-folders ---
+          cd "$WEB_FOLDERS_DIR"
 
-          docker compose pull || true
-          docker compose build
+          echo "Building containers..."
+          docker compose build recipes-backend recipes-frontend nginx
           docker compose up -d --remove-orphans
 
           echo "Waiting for service..."
-
           sleep 6
 
           if curl -fsS http://localhost/api/health > /dev/null; then
@@ -80,13 +128,23 @@ jobs:
             echo "Health check failed -> rollback"
 
             if [ -n "$PREVIOUS_COMMIT" ]; then
+              cd "$RECIPES_DIR"
               git reset --hard "$PREVIOUS_COMMIT"
-              docker compose up -d --build
+              cd "$WEB_FOLDERS_DIR"
+              docker compose build recipes-backend recipes-frontend nginx
+              docker compose up -d
             fi
 
             exit 1
           fi
 
           docker compose ps
-
           EOF
+
+      - name: Deploy notification
+        if: success()
+        run: echo "✅ Deployment to ${{ secrets.VPS_HOST }} completed successfully!"
+
+      - name: Deploy failed notification
+        if: failure()
+        run: echo "❌ Deployment failed!"
