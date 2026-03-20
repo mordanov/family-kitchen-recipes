@@ -18,6 +18,7 @@ const RECIPE_CATEGORIES = [
 const RecipesPage = (() => {
   let recipes = [];
   let currentRecipeId = null;
+  let selectedCategories = [];
 
   async function load(search = '') {
     const grid = document.getElementById('recipes-grid');
@@ -235,6 +236,7 @@ const RecipesPage = (() => {
     document.getElementById('recipe-method').value = 'boiling';
     document.getElementById('recipe-servings').value = 4;
     setSelectedCategories(['закуска']);
+    document.getElementById('recipe-category-picker').value = '';
     document.getElementById('recipe-image').value = '';
     document.getElementById('image-preview').style.display = 'none';
     document.getElementById('image-upload-placeholder').style.display = 'block';
@@ -258,11 +260,62 @@ const RecipesPage = (() => {
   }
 
   function setSelectedCategories(categories) {
-    const normalized = new Set((categories || []).map(c => String(c).trim().toLowerCase()));
-    const select = document.getElementById('recipe-categories');
-    Array.from(select.options).forEach(option => {
-      option.selected = normalized.has(option.value.toLowerCase());
+    const normalized = new Set();
+    selectedCategories = [];
+
+    (categories || []).forEach(raw => {
+      const category = String(raw || '').trim();
+      if (!category || !RECIPE_CATEGORIES.includes(category)) return;
+      if (normalized.has(category)) return;
+      normalized.add(category);
+      selectedCategories.push(category);
     });
+
+    renderSelectedCategories();
+  }
+
+  function renderSelectedCategories() {
+    const editor = document.getElementById('recipe-categories-editor');
+    if (!editor) return;
+
+    if (!selectedCategories.length) {
+      editor.classList.add('empty');
+      editor.textContent = 'Выберите категории из списка ниже';
+      return;
+    }
+
+    editor.classList.remove('empty');
+    editor.innerHTML = selectedCategories
+      .map(category => (
+        `<span class="category-chip">${escapeHtml(category)}<button type="button" class="category-chip-remove" data-category="${escapeHtml(category)}" aria-label="Удалить категорию">×</button></span>`
+      ))
+      .join('');
+
+    editor.querySelectorAll('.category-chip-remove').forEach(btn => {
+      btn.addEventListener('click', () => removeCategory(btn.dataset.category));
+    });
+  }
+
+  function addCategoryFromPicker() {
+    const picker = document.getElementById('recipe-category-picker');
+    const value = String(picker?.value || '').trim();
+    if (!value) return;
+    if (!RECIPE_CATEGORIES.includes(value)) return;
+
+    if (!selectedCategories.includes(value)) {
+      selectedCategories.push(value);
+      renderSelectedCategories();
+    }
+    picker.value = '';
+  }
+
+  function removeCategory(category) {
+    selectedCategories = selectedCategories.filter(item => item !== category);
+    renderSelectedCategories();
+  }
+
+  function getSelectedCategories() {
+    return [...selectedCategories];
   }
 
   async function saveRecipe() {
@@ -272,8 +325,7 @@ const RecipesPage = (() => {
     const ingredients = document.getElementById('recipe-ingredients').value.trim();
     if (!ingredients) { App.toast('Заполните ингредиенты для готовки', 'error'); return; }
 
-    const categories = Array.from(document.getElementById('recipe-categories').selectedOptions)
-      .map(opt => opt.value);
+    const categories = getSelectedCategories();
     if (!categories.length) { App.toast('Выберите минимум одну категорию блюда', 'error'); return; }
 
     const recipe = document.getElementById('recipe-instructions').value.trim();
@@ -368,7 +420,24 @@ const RecipesPage = (() => {
     return RECIPE_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
   }
 
-  return { load, search, openCreate, openEdit, openDetail, closeDetail, closeModal, previewImage, saveRecipe, deleteRecipe, recalc, getAll, startKbjuPolling, stopKbjuPolling, getCategoryOptionsHtml };
+  return {
+    load,
+    search,
+    openCreate,
+    openEdit,
+    openDetail,
+    closeDetail,
+    closeModal,
+    previewImage,
+    saveRecipe,
+    deleteRecipe,
+    recalc,
+    getAll,
+    startKbjuPolling,
+    stopKbjuPolling,
+    addCategoryFromPicker,
+    removeCategory,
+  };
 })();
 
 function escapeHtml(value) {
