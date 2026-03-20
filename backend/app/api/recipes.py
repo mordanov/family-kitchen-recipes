@@ -217,14 +217,14 @@ async def update_recipe(
     _=Depends(get_current_user),
 ):
     result = await db.execute(select(Recipe).where(Recipe.id == recipe_id))
-    recipe = result.scalar_one_or_none()
-    if not recipe:
+    db_recipe = result.scalar_one_or_none()
+    if not db_recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
 
     if image and image.filename:
         # Delete old image
-        if recipe.image_path:
-            old_path = "/app" + recipe.image_path
+        if db_recipe.image_path:
+            old_path = "/app" + db_recipe.image_path
             if os.path.exists(old_path):
                 os.remove(old_path)
         ext = os.path.splitext(image.filename)[1].lower()
@@ -233,7 +233,7 @@ async def update_recipe(
         async with aiofiles.open(filepath, 'wb') as f:
             content = await image.read()
             await f.write(content)
-        recipe.image_path = f"/uploads/{filename}"
+        db_recipe.image_path = f"/uploads/{filename}"
 
     payload = _validate_recipe_payload(
         {
@@ -248,24 +248,24 @@ async def update_recipe(
         }
     )
 
-    recipe.title = payload.title
-    recipe.categories = payload.categories
-    recipe.ingredients = payload.ingredients
-    recipe.recipe = payload.recipe if payload.recipe else None
-    recipe.shopping_list = payload.shopping_list
-    recipe.cooking_method = payload.cooking_method
-    recipe.servings = payload.servings
-    recipe.extra_info = payload.extra_info if payload.extra_info else None
-    recipe.kbju_calculated = False  # Reset, will recalculate
+    db_recipe.title = payload.title
+    db_recipe.categories = payload.categories
+    db_recipe.ingredients = payload.ingredients
+    db_recipe.recipe = payload.recipe if payload.recipe else None
+    db_recipe.shopping_list = payload.shopping_list
+    db_recipe.cooking_method = payload.cooking_method
+    db_recipe.servings = payload.servings
+    db_recipe.extra_info = payload.extra_info if payload.extra_info else None
+    db_recipe.kbju_calculated = False  # Reset, will recalculate
 
     await db.commit()
-    await db.refresh(recipe)
+    await db.refresh(db_recipe)
 
     from app.config import settings
-    background_tasks.add_task(run_kbju_calculation, recipe.id, settings.DATABASE_URL)
+    background_tasks.add_task(run_kbju_calculation, db_recipe.id, settings.DATABASE_URL)
 
     feedback_by_recipe = await _collect_feedback_by_recipe(db)
-    return _build_recipe_out(recipe, feedback_by_recipe)
+    return _build_recipe_out(db_recipe, feedback_by_recipe)
 
 
 @router.delete("/{recipe_id}")

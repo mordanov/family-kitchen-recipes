@@ -1,6 +1,7 @@
 import pytest
+from fastapi import BackgroundTasks
 
-from app.api.recipes import get_recipe, list_recipes
+from app.api.recipes import get_recipe, list_recipes, update_recipe
 from app.models import CookingMethod, FamilyMember, Recipe
 
 
@@ -64,3 +65,37 @@ async def test_get_recipe_prefers_disliked_when_member_has_both(session):
     assert out.member_feedback[0].member_name == "Вера"
     assert out.member_feedback[0].status == "disliked"
 
+
+@pytest.mark.asyncio
+async def test_update_recipe_accepts_recipe_text(session):
+    recipe = Recipe(
+        title="Котлеты",
+        categories=["мясо"],
+        ingredients="мясо",
+        shopping_list="мясо",
+        cooking_method=CookingMethod.frying,
+        servings=3,
+    )
+    session.add(recipe)
+    await session.commit()
+    await session.refresh(recipe)
+
+    out = await update_recipe(
+        recipe_id=recipe.id,
+        background_tasks=BackgroundTasks(),
+        title="Котлеты домашние",
+        categories=["мясо", "закуска"],
+        ingredients="мясо\nлук",
+        recipe="Смешать фарш, сформировать котлеты и обжарить",
+        shopping_list="мясо\nлук",
+        cooking_method=CookingMethod.frying,
+        servings=4,
+        extra_info="",
+        image=None,
+        db=session,
+        _=None,
+    )
+
+    assert out.title == "Котлеты домашние"
+    assert out.recipe == "Смешать фарш, сформировать котлеты и обжарить"
+    assert out.categories == ["мясо", "закуска"]
