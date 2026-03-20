@@ -434,6 +434,37 @@ select.form-control[multiple] {
   appearance: auto;
 }
 
+.image-upload-area {
+  border: 2px dashed var(--c-border);
+  border-radius: var(--radius-sm);
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.image-upload-area:hover {
+  border-color: var(--c-primary);
+  background: #FFF8F5;
+}
+.image-upload-area input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+.image-preview {
+  display: block;
+  max-height: min(40vh, 280px);
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  margin: 10px auto 0;
+}
+
 /* ─── RECIPE DETAIL ─── */
 .recipe-detail-header {
   display: flex; gap: 24px; margin-bottom: 28px;
