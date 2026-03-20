@@ -236,7 +236,6 @@ const RecipesPage = (() => {
     document.getElementById('recipe-method').value = 'boiling';
     document.getElementById('recipe-servings').value = 4;
     setSelectedCategories(['закуска']);
-    document.getElementById('recipe-category-picker').value = '';
     document.getElementById('recipe-image').value = '';
     document.getElementById('image-preview').style.display = 'none';
     document.getElementById('image-upload-placeholder').style.display = 'block';
@@ -278,35 +277,36 @@ const RecipesPage = (() => {
     const editor = document.getElementById('recipe-categories-editor');
     if (!editor) return;
 
-    if (!selectedCategories.length) {
-      editor.classList.add('empty');
-      editor.textContent = 'Выберите категории из списка ниже';
-      return;
-    }
-
-    editor.classList.remove('empty');
-    editor.innerHTML = selectedCategories
+    const chipsHtml = selectedCategories
       .map(category => (
         `<span class="category-chip">${escapeHtml(category)}<button type="button" class="category-chip-remove" data-category="${escapeHtml(category)}" aria-label="Удалить категорию">×</button></span>`
       ))
       .join('');
+
+    editor.classList.toggle('empty', selectedCategories.length === 0);
+    editor.innerHTML = `${chipsHtml}<select class="category-inline-picker" id="recipe-category-picker"><option value="">+ Добавить категорию...</option>${getCategoryOptionsHtml()}</select>`;
+
+    const picker = document.getElementById('recipe-category-picker');
+    if (picker) {
+      picker.addEventListener('change', event => {
+        addCategoryFromPicker(event.target.value);
+      });
+    }
 
     editor.querySelectorAll('.category-chip-remove').forEach(btn => {
       btn.addEventListener('click', () => removeCategory(btn.dataset.category));
     });
   }
 
-  function addCategoryFromPicker() {
-    const picker = document.getElementById('recipe-category-picker');
-    const value = String(picker?.value || '').trim();
-    if (!value) return;
-    if (!RECIPE_CATEGORIES.includes(value)) return;
+  function addCategoryFromPicker(value) {
+    const category = String(value || '').trim();
+    if (!category) return;
+    if (!RECIPE_CATEGORIES.includes(category)) return;
 
-    if (!selectedCategories.includes(value)) {
-      selectedCategories.push(value);
+    if (!selectedCategories.includes(category)) {
+      selectedCategories.push(category);
       renderSelectedCategories();
     }
-    picker.value = '';
   }
 
   function removeCategory(category) {
@@ -316,6 +316,14 @@ const RecipesPage = (() => {
 
   function getSelectedCategories() {
     return [...selectedCategories];
+  }
+
+  function getCategoryOptionsHtml() {
+    const selected = new Set(selectedCategories);
+    return RECIPE_CATEGORIES
+      .filter(category => !selected.has(category))
+      .map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+      .join('');
   }
 
   async function saveRecipe() {
@@ -416,10 +424,6 @@ const RecipesPage = (() => {
   // ── Public API for menu page ──
   function getAll() { return recipes; }
 
-  function getCategoryOptionsHtml() {
-    return RECIPE_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
-  }
-
   return {
     load,
     search,
@@ -435,8 +439,6 @@ const RecipesPage = (() => {
     getAll,
     startKbjuPolling,
     stopKbjuPolling,
-    addCategoryFromPicker,
-    removeCategory,
   };
 })();
 

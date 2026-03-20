@@ -422,25 +422,17 @@ select.form-control[multiple] {
   line-height: 1;
   padding: 0;
 }
-.category-picker-row {
-  margin-top: 8px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
+.category-inline-picker {
+  flex: 1;
+  min-width: 220px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: 14px;
+  padding: 6px 2px;
+  appearance: auto;
 }
-
-.image-upload-area {
-  border: 2px dashed var(--c-border);
-  border-radius: var(--radius-sm);
-  padding: 24px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
-}
-.image-upload-area:hover { border-color: var(--c-primary); background: #FFF8F5; }
-.image-upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.image-preview { max-height: 160px; max-width: 100%; border-radius: 8px; margin-top: 10px; }
 
 /* ─── RECIPE DETAIL ─── */
 .recipe-detail-header {
@@ -1032,25 +1024,8 @@ select.form-control[multiple] {
       <div class="form-row">
         <div class="form-group" style="grid-column:1/-1">
           <label class="form-label">Категория блюда *</label>
-          <div class="form-control category-editor empty" id="recipe-categories-editor">Выберите категории из списка ниже</div>
-          <div class="category-picker-row">
-            <select class="form-control" id="recipe-category-picker">
-              <option value="">Выберите категорию...</option>
-              <option value="суп">суп</option>
-              <option value="мясо">мясо</option>
-              <option value="курица">курица</option>
-              <option value="рыба">рыба</option>
-              <option value="завтрак">завтрак</option>
-              <option value="закуска">закуска</option>
-              <option value="салат">салат</option>
-              <option value="гарнир">гарнир</option>
-              <option value="морепродукты">морепродукты</option>
-              <option value="субпродукты">субпродукты</option>
-              <option value="высокобелковые продукты">высокобелковые продукты</option>
-            </select>
-            <button type="button" class="btn btn-secondary" onclick="RecipesPage.addCategoryFromPicker()">Добавить</button>
-          </div>
-          <p class="form-hint">Выбранные категории отображаются в строке выше, удалить можно по кнопке ×</p>
+          <div class="form-control category-editor empty" id="recipe-categories-editor">Выберите категории из списка</div>
+          <p class="form-hint">Категории отображаются прямо в этом поле, удалить можно по кнопке ×</p>
         </div>
       </div>
       <div class="form-row">
