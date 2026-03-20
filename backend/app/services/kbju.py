@@ -13,14 +13,16 @@ COOKING_METHOD_RU = {
     "air_fryer": "аэрогриль",
     "baking": "запекание",
     "raw": "в сыром виде",
+    "other": "разное",
 }
 
 
 async def calculate_kbju(
     title: str,
     ingredients: str,
-    cooking_method: str,
     servings: int,
+    cooking_method: Optional[str] = None,
+    recipe_text: Optional[str] = None,
 ) -> Optional[dict]:
     """
     Calculate KBJU using OpenAI API.
@@ -31,19 +33,26 @@ async def calculate_kbju(
         logger.info("No OpenAI key configured, using mock KBJU calculation")
         return _mock_kbju(ingredients)
 
-    method_ru = COOKING_METHOD_RU.get(cooking_method, cooking_method)
+    cooking_line = ""
+    thermal_line = ""
+    if recipe_text and recipe_text.strip():
+        cooking_line = f"Рецепт (алгоритм готовки):\n{recipe_text.strip()}\n"
+        thermal_line = "1. Учти описанную в рецепте термообработку, потери воды и жиров"
+    else:
+        method_ru = COOKING_METHOD_RU.get(cooking_method or "", cooking_method or "не указан")
+        cooking_line = f"Способ приготовления: {method_ru}\n"
+        thermal_line = f"1. Учти потери при тепловой обработке ({method_ru}): вода испаряется, жиры частично вытапливаются"
 
     prompt = f"""Ты опытный диетолог. Рассчитай КБЖУ (калории, белки, жиры, углеводы) строго на ОДНУ порцию готового блюда.
 
 Название: {title}
-Способ приготовления: {method_ru}
-Количество порций: {servings}
+{cooking_line}Количество порций: {servings}
 
 Ингредиенты:
 {ingredients}
 
 Правила расчёта:
-1. Учти потери при тепловой обработке ({method_ru}): вода испаряется, жиры частично вытапливаются
+{thermal_line}
 2. Раздели итоговые нутриенты на {servings} порций
 3. Округли до 1 знака после запятой
 

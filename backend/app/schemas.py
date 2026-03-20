@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Literal
 from datetime import datetime, date
-from app.models import CookingMethod, MenuStatus, Gender, DietModel
+from app.models import CookingMethod, MenuStatus, Gender, DietModel, ALLOWED_RECIPE_CATEGORIES
 
 
 # Auth
@@ -19,11 +19,28 @@ class LoginRequest(BaseModel):
 # Recipe
 class RecipeBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
+    categories: List[str] = Field(default_factory=list)
     ingredients: str = Field(..., min_length=1)
+    recipe: Optional[str] = None
     shopping_list: str = ""
     cooking_method: CookingMethod = CookingMethod.boiling
     servings: int = Field(default=4, ge=1, le=50)
     extra_info: Optional[str] = None
+
+    @field_validator("categories")
+    @classmethod
+    def validate_categories(cls, value: List[str]) -> List[str]:
+        cleaned = [item.strip() for item in value if item and item.strip()]
+        if not cleaned:
+            raise ValueError("Нужно выбрать минимум одну категорию")
+
+        allowed = set(ALLOWED_RECIPE_CATEGORIES)
+        invalid = [item for item in cleaned if item not in allowed]
+        if invalid:
+            raise ValueError(f"Недопустимые категории: {', '.join(invalid)}")
+
+        # Keep order, remove duplicates.
+        return list(dict.fromkeys(cleaned))
 
 
 class RecipeCreate(RecipeBase):

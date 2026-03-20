@@ -6,7 +6,7 @@ import pytest
 from app.services import kbju as kbju_service
 
 
-def install_fake_openai(monkeypatch, response_text):
+def install_fake_openai(monkeypatch, response_text, capture=None):
     class FakeResponse:
         choices = [
             types.SimpleNamespace(
@@ -22,6 +22,8 @@ def install_fake_openai(monkeypatch, response_text):
             )
 
         async def _create(self, **_kwargs):
+            if capture is not None:
+                capture.update(_kwargs)
             return FakeResponse()
 
     monkeypatch.setitem(sys.modules, "openai", types.SimpleNamespace(AsyncOpenAI=FakeAsyncOpenAI))
@@ -34,8 +36,8 @@ async def test_calculate_kbju_uses_mock_when_openai_key_is_missing(monkeypatch):
     result = await kbju_service.calculate_kbju(
         title="Овощной суп",
         ingredients="картофель\nморковь\nлук",
-        cooking_method="boiling",
         servings=4,
+        cooking_method="boiling",
     )
 
     assert result == {
@@ -57,8 +59,8 @@ async def test_calculate_kbju_extracts_json_from_openai_response(monkeypatch):
     result = await kbju_service.calculate_kbju(
         title="Курица",
         ingredients="курица\nспеции",
-        cooking_method="baking",
         servings=2,
+        cooking_method="baking",
     )
 
     assert result == {
@@ -80,9 +82,31 @@ async def test_calculate_kbju_returns_none_for_suspicious_values(monkeypatch):
     result = await kbju_service.calculate_kbju(
         title="Очень калорийное блюдо",
         ingredients="масло",
-        cooking_method="frying",
         servings=1,
+        cooking_method="frying",
     )
 
     assert result is None
 
+
+@pytest.mark.asyncio
+async def test_calculate_kbju_uses_recipe_text_when_present(monkeypatch):
+    monkeypatch.setattr(kbju_service.settings, "OPENAI_API_KEY", "test-key")
+    captured = {}
+    install_fake_openai(
+        monkeypatch,
+        '{"calories": 200, "proteins": 10, "fats": 8, "carbs": 15}',
+        capture=captured,
+    )
+
+    await kbju_service.calculate_kbju(
+        title="Гречка с курицей",
+        ingredients="гречка\nкурица",
+        servings=3,
+        cooking_method="boiling",
+        recipe_text="Обжарить курицу, добавить крупу и тушить 20 минут",
+    )
+
+    prompt = captured["messages"][0]["content"]
+    assert "Рецепт (алгоритм готовки)" in prompt
+    assert "Способ приготовления" not in prompt

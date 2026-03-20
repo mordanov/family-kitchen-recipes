@@ -1,6 +1,20 @@
 /**
  * Recipes page – list, create, edit, delete, detail view
  */
+const RECIPE_CATEGORIES = [
+  'суп',
+  'мясо',
+  'курица',
+  'рыба',
+  'завтрак',
+  'закуска',
+  'салат',
+  'гарнир',
+  'морепродукты',
+  'субпродукты',
+  'высокобелковые продукты',
+]
+
 const RecipesPage = (() => {
   let recipes = [];
   let currentRecipeId = null;
@@ -47,6 +61,11 @@ const RecipesPage = (() => {
         </div>`
       : `<p class="kbju-pending">⏳ КБЖУ рассчитывается...</p>`;
 
+    const categoryBadges = (r.categories || [])
+      .slice(0, 3)
+      .map(c => `<span class="badge badge-accent">${escapeHtml(c)}</span>`)
+      .join('')
+
     return `
       <div class="recipe-card" onclick="RecipesPage.openDetail(${r.id})">
         <div class="recipe-card-img">${img}</div>
@@ -55,6 +74,7 @@ const RecipesPage = (() => {
           <div class="recipe-card-meta">
             <span class="badge badge-primary">${App.cookingMethodLabel(r.cooking_method)}</span>
             <span class="badge">${r.servings} порц.</span>
+            ${categoryBadges}
           </div>
           ${kbju}
           ${renderMemberFeedback(r)}
@@ -91,7 +111,7 @@ const RecipesPage = (() => {
   }
 
   function getRecipeEmoji(method) {
-    const map = { boiling: '🍲', frying: '🍳', dry_frying: '🥘', stewing: '♨️', air_fryer: '🌀', baking: '🥧', raw: '🥗' };
+    const map = { boiling: '🍲', frying: '🍳', dry_frying: '🥘', stewing: '♨️', air_fryer: '🌀', baking: '🥧', raw: '🥗', other: '🍽️' };
     return map[method] || '🍽️';
   }
 
@@ -131,6 +151,15 @@ const RecipesPage = (() => {
         <button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="RecipesPage.recalc(${r.id})">Пересчитать</button></p>`;
     }
 
+    const categories = (r.categories || [])
+      .map(c => `<span class="badge badge-accent">${escapeHtml(c)}</span>`)
+      .join('') || '<em>Не указаны</em>'
+
+    const recipeText = r.recipe
+      ? `<div class="section-title">👨‍🍳 Рецепт</div>
+         <div class="ingredients-text" style="border-color:var(--c-accent)">${r.recipe}</div>`
+      : ''
+
     const shopping = r.shopping_list
       ? `<div class="section-title">🛒 Закупочный список</div>
          <div class="ingredients-text" style="border-color:var(--c-accent)">${r.shopping_list}</div>`
@@ -155,8 +184,11 @@ const RecipesPage = (() => {
           ${kbjuHtml}
         </div>
       </div>
+      <div class="section-title">🏷️ Категория блюда</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${categories}</div>
       <div class="section-title">📋 Ингредиенты</div>
       <div class="ingredients-text">${r.ingredients || '<em>Не указаны</em>'}</div>
+      ${recipeText}
       ${shopping}
       ${extra}`;
   }
@@ -183,8 +215,10 @@ const RecipesPage = (() => {
     document.getElementById('recipe-method').value = r.cooking_method;
     document.getElementById('recipe-servings').value = r.servings;
     document.getElementById('recipe-ingredients').value = r.ingredients;
+    document.getElementById('recipe-instructions').value = r.recipe || '';
     document.getElementById('recipe-shopping').value = r.shopping_list;
     document.getElementById('recipe-extra').value = r.extra_info || '';
+    setSelectedCategories(r.categories || []);
     if (r.image_path) {
       const prev = document.getElementById('image-preview');
       prev.src = r.image_path;
@@ -195,11 +229,12 @@ const RecipesPage = (() => {
   }
 
   function clearForm() {
-    ['recipe-id', 'recipe-title', 'recipe-ingredients', 'recipe-shopping', 'recipe-extra'].forEach(id => {
+    ['recipe-id', 'recipe-title', 'recipe-ingredients', 'recipe-instructions', 'recipe-shopping', 'recipe-extra'].forEach(id => {
       document.getElementById(id).value = '';
     });
     document.getElementById('recipe-method').value = 'boiling';
     document.getElementById('recipe-servings').value = 4;
+    setSelectedCategories(['закуска']);
     document.getElementById('recipe-image').value = '';
     document.getElementById('image-preview').style.display = 'none';
     document.getElementById('image-upload-placeholder').style.display = 'block';
@@ -222,6 +257,14 @@ const RecipesPage = (() => {
     reader.readAsDataURL(file);
   }
 
+  function setSelectedCategories(categories) {
+    const normalized = new Set((categories || []).map(c => String(c).trim().toLowerCase()));
+    const select = document.getElementById('recipe-categories');
+    Array.from(select.options).forEach(option => {
+      option.selected = normalized.has(option.value.toLowerCase());
+    });
+  }
+
   async function saveRecipe() {
     const title = document.getElementById('recipe-title').value.trim();
     if (!title) { App.toast('Введите название блюда', 'error'); return; }
@@ -229,12 +272,20 @@ const RecipesPage = (() => {
     const ingredients = document.getElementById('recipe-ingredients').value.trim();
     if (!ingredients) { App.toast('Заполните ингредиенты для готовки', 'error'); return; }
 
+    const categories = Array.from(document.getElementById('recipe-categories').selectedOptions)
+      .map(opt => opt.value);
+    if (!categories.length) { App.toast('Выберите минимум одну категорию блюда', 'error'); return; }
+
+    const recipe = document.getElementById('recipe-instructions').value.trim();
+
     const shoppingRaw = document.getElementById('recipe-shopping').value.trim();
     const shopping_list = shoppingRaw || ingredients;
 
     const fd = new FormData();
     fd.append('title', title);
+    categories.forEach(c => fd.append('categories', c));
     fd.append('ingredients', ingredients);
+    fd.append('recipe', recipe);
     fd.append('shopping_list', shopping_list);
     fd.append('cooking_method', document.getElementById('recipe-method').value);
     fd.append('servings', document.getElementById('recipe-servings').value);
@@ -313,5 +364,17 @@ const RecipesPage = (() => {
   // ── Public API for menu page ──
   function getAll() { return recipes; }
 
-  return { load, search, openCreate, openEdit, openDetail, closeDetail, closeModal, previewImage, saveRecipe, deleteRecipe, recalc, getAll, startKbjuPolling, stopKbjuPolling };
+  function getCategoryOptionsHtml() {
+    return RECIPE_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+
+  return { load, search, openCreate, openEdit, openDetail, closeDetail, closeModal, previewImage, saveRecipe, deleteRecipe, recalc, getAll, startKbjuPolling, stopKbjuPolling, getCategoryOptionsHtml };
 })();
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}

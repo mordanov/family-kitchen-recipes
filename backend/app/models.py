@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, Date, ForeignKey, Enum as SAEnum, Table
+from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, Date, ForeignKey, Enum as SAEnum, Table, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime, date, UTC
 import enum
@@ -19,6 +19,24 @@ class CookingMethod(str, enum.Enum):
     air_fryer = "air_fryer"
     baking = "baking"
     raw = "raw"
+    other = "other"
+
+
+ALLOWED_RECIPE_CATEGORIES = (
+    "суп",
+    "мясо",
+    "курица",
+    "рыба",
+    "завтрак",
+    "закуска",
+    "салат",
+    "гарнир",
+    "морепродукты",
+    "субпродукты",
+    "высокобелковые продукты",
+)
+
+DEFAULT_RECIPE_CATEGORY = "закуска"
 
 
 class User(Base):
@@ -33,7 +51,9 @@ class Recipe(Base):
     __tablename__ = "recipes"
     id = Column(Integer, primary_key=True)
     title = Column(String(200), nullable=False)
+    categories = Column(JSON, nullable=False, default=lambda: [DEFAULT_RECIPE_CATEGORY])
     ingredients = Column(Text, nullable=False, default="")
+    recipe = Column(Text, nullable=True)
     shopping_list = Column(Text, nullable=False, default="")
     cooking_method = Column(SAEnum(CookingMethod), nullable=False, default=CookingMethod.boiling)
     servings = Column(Integer, nullable=False, default=4)

@@ -2,6 +2,7 @@ import os
 import uuid
 from collections import defaultdict
 from typing import List, Optional
+from pydantic import ValidationError
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -10,7 +11,7 @@ import aiofiles
 
 from app.database import get_db
 from app.models import Recipe, CookingMethod, FamilyMember
-from app.schemas import RecipeOut, RecipeMemberFeedbackOut
+from app.schemas import RecipeOut, RecipeMemberFeedbackOut, RecipeCreate
 from app.auth import get_current_user
 from app.services.kbju import calculate_kbju
 
@@ -58,6 +59,15 @@ def _build_recipe_out(recipe: Recipe, feedback_by_recipe: dict[int, list[RecipeM
     return data
 
 
+def _validate_recipe_payload(payload: dict) -> RecipeCreate:
+    try:
+        return RecipeCreate.model_validate(payload)
+    except ValidationError as exc:
+        first_error = exc.errors()[0] if exc.errors() else None
+        detail = first_error.get("msg") if first_error else "Некорректные данные рецепта"
+        raise HTTPException(status_code=422, detail=detail) from exc
+
+
 async def run_kbju_calculation(recipe_id: int, db_url: str):
     """Background task to calculate KBJU after recipe save. Retries up to 3 times."""
     import asyncio
@@ -78,10 +88,11 @@ async def run_kbju_calculation(recipe_id: int, db_url: str):
                     break
 
                 kbju = await calculate_kbju(
-                    recipe.title,
-                    recipe.ingredients,
-                    recipe.cooking_method.value,
-                    recipe.servings,
+                    title=recipe.title,
+                    ingredients=recipe.ingredients,
+                    servings=recipe.servings,
+                    cooking_method=recipe.cooking_method.value,
+                    recipe_text=recipe.recipe,
                 )
                 if kbju:
                     recipe.calories = kbju["calories"]
@@ -123,7 +134,9 @@ async def list_recipes(
 async def create_recipe(
     background_tasks: BackgroundTasks,
     title: str = Form(...),
+    categories: List[str] = Form(...),
     ingredients: str = Form(default=""),
+    recipe: str = Form(default=""),
     shopping_list: str = Form(default=""),
     cooking_method: CookingMethod = Form(default=CookingMethod.boiling),
     servings: int = Form(default=4),
@@ -143,13 +156,28 @@ async def create_recipe(
             await f.write(content)
         image_path = f"/uploads/{filename}"
 
+    payload = _validate_recipe_payload(
+        {
+            "title": title,
+            "categories": categories,
+            "ingredients": ingredients,
+            "recipe": recipe,
+            "shopping_list": shopping_list,
+            "cooking_method": cooking_method,
+            "servings": servings,
+            "extra_info": extra_info,
+        }
+    )
+
     recipe = Recipe(
-        title=title,
-        ingredients=ingredients,
-        shopping_list=shopping_list,
-        cooking_method=cooking_method,
-        servings=servings,
-        extra_info=extra_info if extra_info else None,
+        title=payload.title,
+        categories=payload.categories,
+        ingredients=payload.ingredients,
+        recipe=payload.recipe if payload.recipe else None,
+        shopping_list=payload.shopping_list,
+        cooking_method=payload.cooking_method,
+        servings=payload.servings,
+        extra_info=payload.extra_info if payload.extra_info else None,
         image_path=image_path,
     )
     db.add(recipe)
@@ -177,7 +205,9 @@ async def update_recipe(
     recipe_id: int,
     background_tasks: BackgroundTasks,
     title: str = Form(...),
+    categories: List[str] = Form(...),
     ingredients: str = Form(default=""),
+    recipe: str = Form(default=""),
     shopping_list: str = Form(default=""),
     cooking_method: CookingMethod = Form(default=CookingMethod.boiling),
     servings: int = Form(default=4),
@@ -205,12 +235,27 @@ async def update_recipe(
             await f.write(content)
         recipe.image_path = f"/uploads/{filename}"
 
-    recipe.title = title
-    recipe.ingredients = ingredients
-    recipe.shopping_list = shopping_list
-    recipe.cooking_method = cooking_method
-    recipe.servings = servings
-    recipe.extra_info = extra_info if extra_info else None
+    payload = _validate_recipe_payload(
+        {
+            "title": title,
+            "categories": categories,
+            "ingredients": ingredients,
+            "recipe": recipe,
+            "shopping_list": shopping_list,
+            "cooking_method": cooking_method,
+            "servings": servings,
+            "extra_info": extra_info,
+        }
+    )
+
+    recipe.title = payload.title
+    recipe.categories = payload.categories
+    recipe.ingredients = payload.ingredients
+    recipe.recipe = payload.recipe if payload.recipe else None
+    recipe.shopping_list = payload.shopping_list
+    recipe.cooking_method = payload.cooking_method
+    recipe.servings = payload.servings
+    recipe.extra_info = payload.extra_info if payload.extra_info else None
     recipe.kbju_calculated = False  # Reset, will recalculate
 
     await db.commit()

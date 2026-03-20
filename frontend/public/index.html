@@ -383,6 +383,13 @@ select.form-control {
   padding-right: 36px;
 }
 
+select.form-control[multiple] {
+  appearance: auto;
+  background-image: none;
+  padding-right: 12px;
+  min-height: 136px;
+}
+
 .image-upload-area {
   border: 2px dashed var(--c-border);
   border-radius: var(--radius-sm);
@@ -984,6 +991,25 @@ select.form-control {
         </div>
       </div>
       <div class="form-row">
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">Категория блюда *</label>
+          <select class="form-control" id="recipe-categories" multiple>
+            <option value="суп">суп</option>
+            <option value="мясо">мясо</option>
+            <option value="курица">курица</option>
+            <option value="рыба">рыба</option>
+            <option value="завтрак">завтрак</option>
+            <option value="закуска">закуска</option>
+            <option value="салат">салат</option>
+            <option value="гарнир">гарнир</option>
+            <option value="морепродукты">морепродукты</option>
+            <option value="субпродукты">субпродукты</option>
+            <option value="высокобелковые продукты">высокобелковые продукты</option>
+          </select>
+          <p class="form-hint">Выберите минимум одну категорию (Ctrl/Cmd или Shift для мультивыбора)</p>
+        </div>
+      </div>
+      <div class="form-row">
         <div class="form-group">
           <label class="form-label">Способ приготовления</label>
           <select class="form-control" id="recipe-method">
@@ -994,6 +1020,7 @@ select.form-control {
             <option value="air_fryer">💨 Аэрогриль</option>
             <option value="baking">🔥 Запекание</option>
             <option value="raw">🥗 Сырое</option>
+            <option value="other">🍽️ Разное</option>
           </select>
         </div>
         <div class="form-group">
@@ -1005,6 +1032,11 @@ select.form-control {
         <label class="form-label">Ингредиенты для готовки</label>
         <textarea class="form-control" id="recipe-ingredients" rows="5" placeholder="Картофель 1 кг&#10;Лук 1 шт&#10;Морковь 3 шт"></textarea>
         <p class="form-hint">Список ингредиентов, которые входят в блюдо</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Рецепт</label>
+        <textarea class="form-control" id="recipe-instructions" rows="5" placeholder="1. Подготовьте ингредиенты...&#10;2. Обжарьте...&#10;3. Тушите до готовности..."></textarea>
+        <p class="form-hint">Алгоритм готовки. Если заполнен, используется для расчёта КБЖУ вместо способа приготовления.</p>
       </div>
       <div class="form-group">
         <label class="form-label">Закупочный список</label>
