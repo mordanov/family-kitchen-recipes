@@ -29,6 +29,31 @@ const RecipesPage = (() => {
   let pdfControlsBound = false;
   let lastPdfQuery = '';
 
+  function waitForPdfContainerVisible(maxFrames = 20) {
+    const container = document.getElementById('document-viewer-container');
+    if (!container) return Promise.resolve(false);
+
+    return new Promise((resolve) => {
+      let framesLeft = maxFrames;
+      const tick = () => {
+        const visible = container.offsetParent !== null && container.clientWidth > 0 && container.clientHeight > 0;
+        if (visible) {
+          resolve(true);
+          return;
+        }
+
+        framesLeft -= 1;
+        if (framesLeft <= 0) {
+          resolve(false);
+          return;
+        }
+        requestAnimationFrame(tick);
+      };
+
+      requestAnimationFrame(tick);
+    });
+  }
+
   async function load(search = '') {
     const grid = document.getElementById('recipes-grid');
     grid.innerHTML = '<div class="spinner"></div>';
@@ -383,8 +408,12 @@ const RecipesPage = (() => {
 
     pdfLinkService.setViewer(pdfViewerInstance);
 
-    pdfEventBus.on('pagesinit', () => {
-      pdfViewerInstance.currentScaleValue = 'page-width';
+    pdfEventBus.on('pagesinit', async () => {
+      const visible = await waitForPdfContainerVisible();
+      if (!pdfViewerInstance) return;
+      if (visible) {
+        pdfViewerInstance.currentScaleValue = 'page-width';
+      }
       updatePdfUiState();
     });
     pdfEventBus.on('pagechanging', updatePdfUiState);
@@ -509,6 +538,19 @@ const RecipesPage = (() => {
       const blob = await API.downloadRecipeMaterial(recipeId);
       if (!blob) return;
 
+      const modal = document.getElementById('modal-document-viewer');
+      if (!modal) return;
+
+      title.textContent = recipeTitle ? `Дополнительный материал: ${recipeTitle}` : 'Дополнительный материал';
+      const findInfo = document.getElementById('document-find-info');
+      const searchInput = document.getElementById('document-search-input');
+      if (findInfo) findInfo.textContent = '';
+      if (searchInput) searchInput.value = '';
+      lastPdfQuery = '';
+
+      modal.classList.add('open');
+      await waitForPdfContainerVisible();
+
       if (currentDocumentObjectUrl) {
         URL.revokeObjectURL(currentDocumentObjectUrl);
         currentDocumentObjectUrl = null;
@@ -525,13 +567,11 @@ const RecipesPage = (() => {
       pdfViewerInstance.setDocument(pdfDocument);
       pdfLinkService.setDocument(pdfDocument, null);
 
-      title.textContent = recipeTitle ? `Дополнительный материал: ${recipeTitle}` : 'Дополнительный материал';
-      const findInfo = document.getElementById('document-find-info');
-      const searchInput = document.getElementById('document-search-input');
-      if (findInfo) findInfo.textContent = '';
-      if (searchInput) searchInput.value = '';
-      lastPdfQuery = '';
-      document.getElementById('modal-document-viewer').classList.add('open');
+      // Enforce an initial fit once modal layout is visible to avoid PDF.js scroll errors.
+      if (await waitForPdfContainerVisible()) {
+        pdfViewerInstance.currentScaleValue = 'page-width';
+        updatePdfUiState();
+      }
     } catch (e) {
       App.toast('Не удалось открыть PDF: ' + e.message, 'error');
     }
