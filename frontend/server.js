@@ -4,10 +4,12 @@ const https = require('https');
 const path = require('path');
 const app = express();
 
-const BACKEND_ORIGIN = process.env.BACKEND_ORIGIN || 'http://backend:8000';
+const BACKEND_ORIGINS = process.env.BACKEND_ORIGIN
+  ? [process.env.BACKEND_ORIGIN]
+  : ['http://recipes-backend:8000', 'http://backend:8000'];
 
-function proxyToBackend(req, res) {
-  const target = new URL(req.originalUrl, BACKEND_ORIGIN);
+function sendProxyRequest(req, res, origin, onError) {
+  const target = new URL(req.originalUrl, origin);
   const transport = target.protocol === 'https:' ? https : http;
 
   const proxyReq = transport.request(
@@ -42,6 +44,37 @@ function proxyToBackend(req, res) {
   });
 
   req.pipe(proxyReq);
+}
+
+function proxyToBackend(req, res) {
+  let originIndex = 0;
+
+  const tryNextOrigin = (lastError) => {
+    if (originIndex >= BACKEND_ORIGINS.length) {
+      if (!res.headersSent) {
+        res.status(502).json({ detail: `Backend proxy error: ${lastError.message}` });
+      } else {
+        res.end();
+      }
+      return;
+    }
+
+    const origin = BACKEND_ORIGINS[originIndex++];
+    sendProxyRequest(req, res, origin, (error) => {
+      if (error && error.code === 'ENOTFOUND') {
+        tryNextOrigin(error);
+        return;
+      }
+
+      if (!res.headersSent) {
+        res.status(502).json({ detail: `Backend proxy error: ${error.message}` });
+      } else {
+        res.end();
+      }
+    });
+  };
+
+  tryNextOrigin(new Error('No backend origin available'));
 }
 
 // Forward API and uploaded static files to backend instead of SPA fallback.

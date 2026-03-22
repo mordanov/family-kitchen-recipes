@@ -36,6 +36,28 @@ const API = (() => {
     return null;
   }
 
+  async function download(path) {
+    const headers = {};
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(BASE + path, { method: 'GET', headers });
+
+    if (res.status === 401) {
+      localStorage.removeItem('token');
+      location.reload();
+      return null;
+    }
+
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { const e = await res.json(); msg = e.detail || msg; } catch {}
+      throw new Error(msg);
+    }
+
+    return res.blob();
+  }
+
   return {
     get:    (path)         => request('GET',    path),
     post:   (path, body)   => request('POST',   path, body),
@@ -57,6 +79,7 @@ const API = (() => {
     deleteRecipe:     (id)          => request('DELETE', `/recipes/${id}`),
     deleteRecipeMaterial: (id)      => request('DELETE', `/recipes/${id}/additional-material`),
     getRecipeMaterialDownloadUrl: (id) => `/api/recipes/${id}/additional-material/download`,
+    downloadRecipeMaterial: (id)    => download(`/recipes/${id}/additional-material/download`),
     recalcKbju:       (id)          => request('POST', `/recipes/${id}/recalculate`),
     kbjuStatus:       (id)          => request('GET',  `/recipes/${id}/kbju-status`),
 

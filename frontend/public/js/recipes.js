@@ -201,13 +201,12 @@ const RecipesPage = (() => {
 
     const additionalMaterialPath = r.additional_material_path || '';
     const additionalMaterialName = r.additional_material_original_name || 'material.pdf';
-    const materialDownloadUrl = API.getRecipeMaterialDownloadUrl(r.id);
     const additionalMaterial = additionalMaterialPath
       ? `<div class="section-title">📄 Дополнительный материал</div>
          <div class="ingredients-text" style="border-color:var(--c-border)">Файл: ${escapeHtml(additionalMaterialName)}</div>
          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--spacing-sm,8px)">
            <button class="btn btn-secondary btn-sm" onclick='RecipesPage.openDocumentViewer(${JSON.stringify(additionalMaterialPath)}, ${JSON.stringify(r.title || "")})'>👁️ Открыть в окне</button>
-           <a class="btn btn-secondary btn-sm" href="${materialDownloadUrl}" download="${escapeHtml(additionalMaterialName)}">⬇️ Скачать PDF</a>
+           <button class="btn btn-secondary btn-sm" onclick='RecipesPage.downloadAdditionalMaterial(${r.id}, ${JSON.stringify(additionalMaterialName)})'>⬇️ Скачать PDF</button>
            <button class="btn btn-danger btn-sm" onclick="RecipesPage.removeAdditionalMaterial(${r.id})">🗑️ Удалить материал</button>
          </div>`
       : '';
@@ -529,6 +528,27 @@ const RecipesPage = (() => {
     }
   }
 
+  async function downloadAdditionalMaterial(id, fileName = 'material.pdf') {
+    try {
+      const blob = await API.downloadRecipeMaterial(id);
+      if (!blob) return;
+
+      const safeName = String(fileName || 'material.pdf').trim() || 'material.pdf';
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = safeName;
+      link.rel = 'noopener';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      App.toast('Ошибка скачивания материала: ' + e.message, 'error');
+    }
+  }
+
   async function recalc(id) {
     try {
       await API.recalcKbju(id);
@@ -587,6 +607,7 @@ const RecipesPage = (() => {
     saveRecipe,
     deleteRecipe,
     removeAdditionalMaterial,
+    downloadAdditionalMaterial,
     recalc,
     getAll,
     startKbjuPolling,

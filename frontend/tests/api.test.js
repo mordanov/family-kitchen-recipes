@@ -13,6 +13,18 @@ function jsonResponse(body, status = 200, contentType = 'application/json') {
   }
 }
 
+function binaryResponse(blob, status = 200, contentType = 'application/pdf') {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: {
+      get: (name) => (name.toLowerCase() === 'content-type' ? contentType : null),
+    },
+    blob: vi.fn().mockResolvedValue(blob),
+    json: vi.fn(),
+  }
+}
+
 describe('API client', () => {
   beforeEach(() => {
     loadBrowserScript('../../public/js/api.js', 'API')
@@ -51,6 +63,21 @@ describe('API client', () => {
 
     const [url] = fetch.mock.calls[0]
     expect(url).toBe('/api/recipes/?search=%D1%81%D1%8B%D1%80%20%26%20%D1%81%D1%83%D0%BF')
+  })
+
+  it('downloads recipe material with bearer token', async () => {
+    localStorage.setItem('token', 'jwt-token')
+    const pdfBlob = new Blob(['%PDF-test'], { type: 'application/pdf' })
+    fetch.mockResolvedValue(binaryResponse(pdfBlob))
+
+    const result = await window.API.downloadRecipeMaterial(42)
+
+    expect(result).toBeInstanceOf(Blob)
+    expect(result.type).toBe('application/pdf')
+    const [url, options] = fetch.mock.calls[0]
+    expect(url).toBe('/api/recipes/42/additional-material/download')
+    expect(options.method).toBe('GET')
+    expect(options.headers.Authorization).toBe('Bearer jwt-token')
   })
 })
 
