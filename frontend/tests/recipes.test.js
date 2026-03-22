@@ -123,8 +123,96 @@ describe('RecipesPage', () => {
     expect(submitted.get('active_cooking_time_minutes')).toBe('20')
     expect(submitted.get('cooking_time_minutes')).toBe('45')
     expect(submitted.get('freezer_friendly')).toBe('true')
-    expect(document.getElementById('recipe-freezer-yes').checked).toBe(true)
-    expect(document.getElementById('recipe-freezer-no').checked).toBe(false)
+    expect(document.getElementById('recipe-freezer-yes').checked).toBe(false)
+    expect(document.getElementById('recipe-freezer-no').checked).toBe(true)
+    expect(document.getElementById('recipe-title').value).toBe('')
+  })
+
+  it('clears the previous image preview when editing a recipe without an image', () => {
+    renderRecipeFormShell()
+
+    window.RecipesPage.openEdit({
+      id: 1,
+      title: 'С картинкой',
+      categories: ['закуска'],
+      ingredients: 'Тесто',
+      recipe: '',
+      shopping_list: 'Тесто',
+      cooking_method: 'boiling',
+      servings: 2,
+      cooking_time_minutes: 10,
+      active_cooking_time_minutes: null,
+      freezer_friendly: false,
+      extra_info: '',
+      image_path: '/uploads/first.png',
+    })
+
+    const preview = document.getElementById('image-preview')
+    const placeholder = document.getElementById('image-upload-placeholder')
+
+    expect(preview.getAttribute('src')).toBe('/uploads/first.png')
+    expect(preview.style.display).toBe('block')
+    expect(placeholder.style.display).toBe('none')
+
+    window.RecipesPage.openEdit({
+      id: 2,
+      title: 'Без картинки',
+      categories: ['закуска'],
+      ingredients: 'Фарш',
+      recipe: '',
+      shopping_list: 'Фарш',
+      cooking_method: 'boiling',
+      servings: 2,
+      cooking_time_minutes: 12,
+      active_cooking_time_minutes: null,
+      freezer_friendly: false,
+      extra_info: '',
+      image_path: null,
+    })
+
+    expect(preview.hasAttribute('src')).toBe(false)
+    expect(preview.style.display).toBe('none')
+    expect(placeholder.style.display).toBe('block')
+  })
+
+  it('resets recipe form state when the modal is closed', () => {
+    renderRecipeFormShell()
+
+    window.RecipesPage.openEdit({
+      id: 3,
+      title: 'Лазанья',
+      categories: ['мясо', 'гарнир'],
+      ingredients: 'Листы\nФарш',
+      recipe: 'Собрать слои',
+      shopping_list: 'Листы\nФарш',
+      cooking_method: 'boiling',
+      servings: 6,
+      cooking_time_minutes: 60,
+      active_cooking_time_minutes: 25,
+      freezer_friendly: true,
+      extra_info: 'Пробный рецепт',
+      image_path: '/uploads/lasagna.png',
+    })
+
+    window.RecipesPage.closeModal()
+
+    expect(document.getElementById('modal-recipe-form').classList.contains('open')).toBe(false)
+    expect(document.getElementById('recipe-id').value).toBe('')
+    expect(document.getElementById('recipe-title').value).toBe('')
+    expect(document.getElementById('recipe-ingredients').value).toBe('')
+    expect(document.getElementById('recipe-instructions').value).toBe('')
+    expect(document.getElementById('recipe-shopping').value).toBe('')
+    expect(document.getElementById('recipe-extra').value).toBe('')
+    expect(document.getElementById('recipe-active-cooking-time').value).toBe('')
+    expect(document.getElementById('recipe-cooking-time').value).toBe('')
+    expect(document.getElementById('recipe-servings').value).toBe('4')
+    expect(document.getElementById('recipe-method').value).toBe('boiling')
+    expect(document.getElementById('recipe-freezer-yes').checked).toBe(false)
+    expect(document.getElementById('recipe-freezer-no').checked).toBe(true)
+    expect(document.getElementById('image-preview').hasAttribute('src')).toBe(false)
+    expect(document.getElementById('image-preview').style.display).toBe('none')
+    expect(document.getElementById('image-upload-placeholder').style.display).toBe('block')
+    expect(document.getElementById('recipe-categories-editor').textContent).toContain('закуска')
   })
 })
 

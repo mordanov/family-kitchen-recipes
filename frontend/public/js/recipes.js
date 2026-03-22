@@ -255,8 +255,17 @@ const RecipesPage = (() => {
       prev.src = r.image_path;
       prev.style.display = 'block';
       document.getElementById('image-upload-placeholder').style.display = 'none';
+    } else {
+      resetImagePreview();
     }
     document.getElementById('modal-recipe-form').classList.add('open');
+  }
+
+  function resetImagePreview() {
+    const preview = document.getElementById('image-preview');
+    preview.removeAttribute('src');
+    preview.style.display = 'none';
+    document.getElementById('image-upload-placeholder').style.display = 'block';
   }
 
   function clearForm() {
@@ -268,12 +277,12 @@ const RecipesPage = (() => {
     setFreezerFriendly(false);
     setSelectedCategories(['закуска']);
     document.getElementById('recipe-image').value = '';
-    document.getElementById('image-preview').style.display = 'none';
-    document.getElementById('image-upload-placeholder').style.display = 'block';
+    resetImagePreview();
   }
 
   function closeModal() {
     document.getElementById('modal-recipe-form').classList.remove('open');
+    clearForm();
   }
 
   function previewImage(input) {
