@@ -20,6 +20,14 @@ const RecipesPage = (() => {
   let recipes = [];
   let currentRecipeId = null;
   let selectedCategories = [];
+  let currentDocumentObjectUrl = null;
+  let pdfViewerInstance = null;
+  let pdfEventBus = null;
+  let pdfLinkService = null;
+  let pdfFindController = null;
+  let pdfDocument = null;
+  let pdfControlsBound = false;
+  let lastPdfQuery = '';
 
   async function load(search = '') {
     const grid = document.getElementById('recipes-grid');
@@ -205,7 +213,7 @@ const RecipesPage = (() => {
       ? `<div class="section-title">📄 Дополнительный материал</div>
          <div class="ingredients-text" style="border-color:var(--c-border)">Файл: ${escapeHtml(additionalMaterialName)}</div>
          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--spacing-sm,8px)">
-           <button class="btn btn-secondary btn-sm" onclick='RecipesPage.openDocumentViewer(${JSON.stringify(additionalMaterialPath)}, ${JSON.stringify(r.title || "")})'>👁️ Открыть в окне</button>
+           <button class="btn btn-secondary btn-sm" onclick='RecipesPage.openDocumentViewer(${r.id}, ${JSON.stringify(r.title || "")})'>👁️ Открыть в окне</button>
            <button class="btn btn-secondary btn-sm" onclick='RecipesPage.downloadAdditionalMaterial(${r.id}, ${JSON.stringify(additionalMaterialName)})'>⬇️ Скачать PDF</button>
            <button class="btn btn-danger btn-sm" onclick="RecipesPage.removeAdditionalMaterial(${r.id})">🗑️ Удалить материал</button>
          </div>`
@@ -351,20 +359,197 @@ const RecipesPage = (() => {
     setDocumentInfo(file.name);
   }
 
-  function openDocumentViewer(documentPath, recipeTitle = '') {
-    if (!documentPath) return;
-    const frame = document.getElementById('document-viewer-frame');
-    const title = document.getElementById('document-viewer-title');
-    if (!frame || !title) return;
+  function ensurePdfViewerInitialized() {
+    if (pdfViewerInstance) return true;
+    if (!window.pdfjsLib || !window.pdfjsViewer) return false;
 
-    title.textContent = recipeTitle ? `Дополнительный материал: ${recipeTitle}` : 'Дополнительный материал';
-    frame.src = `${documentPath}#toolbar=1&navpanes=0&scrollbar=1`;
-    document.getElementById('modal-document-viewer').classList.add('open');
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    const container = document.getElementById('document-viewer-container');
+    const viewer = document.getElementById('document-viewer-canvas');
+    if (!container || !viewer) return false;
+
+    pdfEventBus = new window.pdfjsViewer.EventBus();
+    pdfLinkService = new window.pdfjsViewer.PDFLinkService({ eventBus: pdfEventBus });
+    pdfFindController = new window.pdfjsViewer.PDFFindController({ eventBus: pdfEventBus, linkService: pdfLinkService });
+    pdfViewerInstance = new window.pdfjsViewer.PDFViewer({
+      container,
+      viewer,
+      eventBus: pdfEventBus,
+      linkService: pdfLinkService,
+      findController: pdfFindController,
+      textLayerMode: 2,
+    });
+
+    pdfLinkService.setViewer(pdfViewerInstance);
+
+    pdfEventBus.on('pagesinit', () => {
+      pdfViewerInstance.currentScaleValue = 'page-width';
+      updatePdfUiState();
+    });
+    pdfEventBus.on('pagechanging', updatePdfUiState);
+    pdfEventBus.on('scalechanging', updatePdfUiState);
+    pdfEventBus.on('updatefindmatchescount', ({ matchesCount }) => {
+      const findInfo = document.getElementById('document-find-info');
+      if (!findInfo) return;
+      const total = matchesCount?.total || 0;
+      const current = matchesCount?.current || 0;
+      findInfo.textContent = total ? `Найдено: ${current}/${total}` : 'Совпадений не найдено';
+    });
+
+    return true;
   }
 
-  function closeDocumentViewer() {
-    const frame = document.getElementById('document-viewer-frame');
-    if (frame) frame.removeAttribute('src');
+  function updatePdfUiState() {
+    const pageInfo = document.getElementById('document-page-info');
+    const zoomInfo = document.getElementById('document-zoom-info');
+    if (pageInfo && pdfViewerInstance?.pagesCount) {
+      pageInfo.textContent = `${pdfViewerInstance.currentPageNumber} / ${pdfViewerInstance.pagesCount}`;
+    }
+    if (zoomInfo && pdfViewerInstance?.currentScale) {
+      zoomInfo.textContent = `${Math.round(pdfViewerInstance.currentScale * 100)}%`;
+    }
+  }
+
+  function triggerPdfFind(findPrevious = false) {
+    if (!pdfEventBus) return;
+    const input = document.getElementById('document-search-input');
+    const query = (input?.value || '').trim();
+    const findInfo = document.getElementById('document-find-info');
+    if (!query) {
+      if (findInfo) findInfo.textContent = '';
+      return;
+    }
+
+    const isRepeat = query === lastPdfQuery;
+    pdfEventBus.dispatch('find', {
+      source: window,
+      type: isRepeat ? 'again' : '',
+      query,
+      phraseSearch: true,
+      caseSensitive: false,
+      entireWord: false,
+      highlightAll: true,
+      findPrevious,
+    });
+    lastPdfQuery = query;
+  }
+
+  function bindPdfControls() {
+    if (pdfControlsBound) return;
+
+    const prevBtn = document.getElementById('document-prev-page');
+    const nextBtn = document.getElementById('document-next-page');
+    const zoomOutBtn = document.getElementById('document-zoom-out');
+    const zoomInBtn = document.getElementById('document-zoom-in');
+    const zoomResetBtn = document.getElementById('document-zoom-reset');
+    const searchInput = document.getElementById('document-search-input');
+    const searchPrevBtn = document.getElementById('document-search-prev');
+    const searchNextBtn = document.getElementById('document-search-next');
+
+    if (!prevBtn || !nextBtn || !zoomOutBtn || !zoomInBtn || !zoomResetBtn || !searchInput || !searchPrevBtn || !searchNextBtn) {
+      return;
+    }
+
+    prevBtn.addEventListener('click', () => {
+      if (!pdfViewerInstance) return;
+      pdfViewerInstance.currentPageNumber = Math.max(1, pdfViewerInstance.currentPageNumber - 1);
+      updatePdfUiState();
+    });
+
+    nextBtn.addEventListener('click', () => {
+      if (!pdfViewerInstance) return;
+      pdfViewerInstance.currentPageNumber = Math.min(pdfViewerInstance.pagesCount || 1, pdfViewerInstance.currentPageNumber + 1);
+      updatePdfUiState();
+    });
+
+    zoomOutBtn.addEventListener('click', () => {
+      if (!pdfViewerInstance) return;
+      pdfViewerInstance.currentScale = Math.max(0.5, (pdfViewerInstance.currentScale || 1) - 0.1);
+      updatePdfUiState();
+    });
+
+    zoomInBtn.addEventListener('click', () => {
+      if (!pdfViewerInstance) return;
+      pdfViewerInstance.currentScale = Math.min(3, (pdfViewerInstance.currentScale || 1) + 0.1);
+      updatePdfUiState();
+    });
+
+    zoomResetBtn.addEventListener('click', () => {
+      if (!pdfViewerInstance) return;
+      pdfViewerInstance.currentScaleValue = 'page-width';
+      updatePdfUiState();
+    });
+
+    searchInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        triggerPdfFind(event.shiftKey);
+      }
+    });
+
+    searchPrevBtn.addEventListener('click', () => triggerPdfFind(true));
+    searchNextBtn.addEventListener('click', () => triggerPdfFind(false));
+
+    pdfControlsBound = true;
+  }
+
+  async function openDocumentViewer(recipeId, recipeTitle = '') {
+    if (!recipeId) return;
+    const title = document.getElementById('document-viewer-title');
+    if (!title) return;
+
+    const initialized = ensurePdfViewerInitialized();
+    bindPdfControls();
+    if (!initialized || !pdfViewerInstance) {
+      App.toast('PDF просмотрщик не инициализирован', 'error');
+      return;
+    }
+
+    try {
+      const blob = await API.downloadRecipeMaterial(recipeId);
+      if (!blob) return;
+
+      if (currentDocumentObjectUrl) {
+        URL.revokeObjectURL(currentDocumentObjectUrl);
+        currentDocumentObjectUrl = null;
+      }
+
+      currentDocumentObjectUrl = URL.createObjectURL(blob);
+      const loadingTask = window.pdfjsLib.getDocument(currentDocumentObjectUrl);
+      const loadedDocument = await loadingTask.promise;
+
+      if (pdfDocument) {
+        await pdfDocument.destroy();
+      }
+      pdfDocument = loadedDocument;
+      pdfViewerInstance.setDocument(pdfDocument);
+      pdfLinkService.setDocument(pdfDocument, null);
+
+      title.textContent = recipeTitle ? `Дополнительный материал: ${recipeTitle}` : 'Дополнительный материал';
+      const findInfo = document.getElementById('document-find-info');
+      const searchInput = document.getElementById('document-search-input');
+      if (findInfo) findInfo.textContent = '';
+      if (searchInput) searchInput.value = '';
+      lastPdfQuery = '';
+      document.getElementById('modal-document-viewer').classList.add('open');
+    } catch (e) {
+      App.toast('Не удалось открыть PDF: ' + e.message, 'error');
+    }
+  }
+
+  async function closeDocumentViewer() {
+    if (pdfViewerInstance) {
+      pdfViewerInstance.setDocument(null);
+    }
+    if (pdfDocument) {
+      await pdfDocument.destroy();
+      pdfDocument = null;
+    }
+    if (currentDocumentObjectUrl) {
+      URL.revokeObjectURL(currentDocumentObjectUrl);
+      currentDocumentObjectUrl = null;
+    }
+    lastPdfQuery = '';
     document.getElementById('modal-document-viewer').classList.remove('open');
   }
 

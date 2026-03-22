@@ -493,12 +493,36 @@ select.form-control[multiple] {
 .document-viewer-modal {
   max-width: 960px;
 }
-.document-viewer-frame {
+.document-viewer-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.document-viewer-toolbar .form-control {
+  width: auto;
+  min-width: 140px;
+}
+.document-viewer-toolbar .viewer-status {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--c-text-muted);
+}
+.document-viewer-container {
   width: 100%;
   height: min(75vh, 860px);
-  border: 0;
+  border: 1px solid var(--c-border);
   border-radius: var(--radius-sm);
   background: #f7f7f7;
+  overflow: auto;
+}
+.document-viewer-canvas {
+  position: relative;
+  min-height: 100%;
+}
+.document-viewer-canvas .pdfViewer .page {
+  margin: 12px auto;
 }
 
 /* ─── RECIPE DETAIL ─── */
@@ -1219,7 +1243,22 @@ select.form-control[multiple] {
       <button class="modal-close" onclick="RecipesPage.closeDocumentViewer()">✕</button>
     </div>
     <div class="modal-body">
-      <iframe id="document-viewer-frame" class="document-viewer-frame" title="PDF document viewer"></iframe>
+      <div class="document-viewer-toolbar">
+        <button class="btn btn-secondary btn-sm" id="document-prev-page" type="button">← Страница</button>
+        <span id="document-page-info" class="badge">1 / 1</span>
+        <button class="btn btn-secondary btn-sm" id="document-next-page" type="button">Страница →</button>
+        <button class="btn btn-secondary btn-sm" id="document-zoom-out" type="button">−</button>
+        <span id="document-zoom-info" class="badge">100%</span>
+        <button class="btn btn-secondary btn-sm" id="document-zoom-in" type="button">+</button>
+        <button class="btn btn-secondary btn-sm" id="document-zoom-reset" type="button">По ширине</button>
+        <input id="document-search-input" class="form-control" type="search" placeholder="Поиск по PDF" />
+        <button class="btn btn-secondary btn-sm" id="document-search-prev" type="button">Найти ↑</button>
+        <button class="btn btn-secondary btn-sm" id="document-search-next" type="button">Найти ↓</button>
+        <span id="document-find-info" class="viewer-status"></span>
+      </div>
+      <div id="document-viewer-container" class="document-viewer-container">
+        <div id="document-viewer-canvas" class="document-viewer-canvas pdfViewer"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1445,6 +1484,9 @@ select.form-control[multiple] {
   </div>
 </div>
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/app.js"></script>
 <script src="/js/recipes.js"></script>
