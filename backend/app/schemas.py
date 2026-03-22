@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, List, Dict, Literal
 from datetime import datetime, date
 from app.models import CookingMethod, MenuStatus, Gender, DietModel, ALLOWED_RECIPE_CATEGORIES
@@ -26,6 +26,8 @@ class RecipeBase(BaseModel):
     cooking_method: CookingMethod = CookingMethod.boiling
     servings: int = Field(default=4, ge=1, le=50)
     cooking_time_minutes: Optional[int] = Field(default=None, ge=1, le=1440)
+    active_cooking_time_minutes: Optional[int] = Field(default=None, ge=1, le=1440)
+    freezer_friendly: bool = False
     extra_info: Optional[str] = None
 
     @field_validator("categories")
@@ -42,6 +44,16 @@ class RecipeBase(BaseModel):
 
         # Keep order, remove duplicates.
         return list(dict.fromkeys(cleaned))
+
+    @model_validator(mode="after")
+    def validate_cooking_times(self):
+        if (
+            self.cooking_time_minutes is not None
+            and self.active_cooking_time_minutes is not None
+            and self.active_cooking_time_minutes > self.cooking_time_minutes
+        ):
+            raise ValueError("Активное время приготовления не может быть больше общего")
+        return self
 
 
 class RecipeCreate(RecipeBase):

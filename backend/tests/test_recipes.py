@@ -1,5 +1,6 @@
 import pytest
 from fastapi import BackgroundTasks
+from fastapi import HTTPException
 
 from app.api.recipes import get_recipe, list_recipes, update_recipe
 from app.models import CookingMethod, FamilyMember, Recipe
@@ -36,6 +37,8 @@ async def test_list_recipes_returns_member_feedback(session):
 
     assert len(by_title["Суп"].member_feedback) == 2
     assert by_title["Пирог"].member_feedback == []
+    assert by_title["Суп"].active_cooking_time_minutes is None
+    assert by_title["Суп"].freezer_friendly is False
 
     statuses = {(item.member_name, item.status, item.member_color) for item in by_title["Суп"].member_feedback}
     assert ("Алиса", "preferred", "#4ECDC4") in statuses
@@ -91,6 +94,8 @@ async def test_update_recipe_accepts_recipe_text(session):
         cooking_method=CookingMethod.frying,
         servings=4,
         cooking_time_minutes=35,
+        active_cooking_time_minutes=20,
+        freezer_friendly=True,
         extra_info="",
         image=None,
         db=session,
@@ -101,3 +106,43 @@ async def test_update_recipe_accepts_recipe_text(session):
     assert out.recipe == "Смешать фарш, сформировать котлеты и обжарить"
     assert out.categories == ["мясо", "напитки"]
     assert out.cooking_time_minutes == 35
+    assert out.active_cooking_time_minutes == 20
+    assert out.freezer_friendly is True
+
+
+@pytest.mark.asyncio
+async def test_update_recipe_rejects_active_time_greater_than_total(session):
+    recipe = Recipe(
+        title="Рагу",
+        categories=["мясо"],
+        ingredients="мясо",
+        shopping_list="мясо",
+        cooking_method=CookingMethod.stewing,
+        servings=2,
+    )
+    session.add(recipe)
+    await session.commit()
+    await session.refresh(recipe)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await update_recipe(
+            recipe_id=recipe.id,
+            background_tasks=BackgroundTasks(),
+            title="Рагу",
+            categories=["мясо"],
+            ingredients="мясо",
+            recipe="",
+            shopping_list="мясо",
+            cooking_method=CookingMethod.stewing,
+            servings=2,
+            cooking_time_minutes=20,
+            active_cooking_time_minutes=25,
+            freezer_friendly=False,
+            extra_info="",
+            image=None,
+            db=session,
+            _=None,
+        )
+
+    assert exc_info.value.status_code == 422
+    assert "Активное время приготовления" in exc_info.value.detail

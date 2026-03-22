@@ -71,6 +71,12 @@ const RecipesPage = (() => {
     const cookingTimeBadge = Number.isFinite(r.cooking_time_minutes)
       ? `<span class="badge">⏱ ${r.cooking_time_minutes} мин</span>`
       : ''
+    const activeCookingTimeBadge = Number.isFinite(r.active_cooking_time_minutes)
+      ? `<span class="badge">🔥 ${r.active_cooking_time_minutes} мин активно</span>`
+      : ''
+    const freezerFriendlyBadge = r.freezer_friendly
+      ? '<span class="badge">❄️ Для морозилки</span>'
+      : ''
 
     return `
       <div class="recipe-card" onclick="RecipesPage.openDetail(${r.id})">
@@ -81,6 +87,8 @@ const RecipesPage = (() => {
             <span class="badge badge-primary">${App.cookingMethodLabel(r.cooking_method)}</span>
             <span class="badge">${r.servings} порц.</span>
             ${cookingTimeBadge}
+            ${activeCookingTimeBadge}
+            ${freezerFriendlyBadge}
             ${categoryBadges}
           </div>
           ${kbju}
@@ -163,8 +171,14 @@ const RecipesPage = (() => {
       .join('') || '<em>Не указаны</em>'
 
     const cookingTimeBadge = Number.isFinite(r.cooking_time_minutes)
-      ? `<span class="badge">⏱ ${r.cooking_time_minutes} мин</span>`
+      ? `<span class="badge">⏱ Общее время: ${r.cooking_time_minutes} мин</span>`
       : ''
+    const activeCookingTimeBadge = Number.isFinite(r.active_cooking_time_minutes)
+      ? `<span class="badge">🔥 Активное время: ${r.active_cooking_time_minutes} мин</span>`
+      : ''
+    const freezerFriendlyBadge = r.freezer_friendly
+      ? '<span class="badge">❄️ Подходит для морозильной камеры</span>'
+      : '<span class="badge">🧊 Не для морозильной камеры</span>'
 
     const recipeText = r.recipe
       ? `<div class="section-title">👨‍🍳 Рецепт</div>
@@ -190,6 +204,8 @@ const RecipesPage = (() => {
             <span class="badge badge-primary">${App.cookingMethodLabel(r.cooking_method)}</span>
             <span class="badge">${r.servings} порций</span>
             ${cookingTimeBadge}
+            ${activeCookingTimeBadge}
+            ${freezerFriendlyBadge}
             <span class="badge" style="font-size:11px;color:var(--c-text-muted)">Обновлён: ${App.formatDate(r.updated_at)}</span>
           </div>
           ${renderMemberFeedback(r, false)}
@@ -226,11 +242,13 @@ const RecipesPage = (() => {
     document.getElementById('recipe-title').value = r.title;
     document.getElementById('recipe-method').value = r.cooking_method;
     document.getElementById('recipe-servings').value = r.servings;
+    document.getElementById('recipe-active-cooking-time').value = r.active_cooking_time_minutes ?? '';
     document.getElementById('recipe-cooking-time').value = r.cooking_time_minutes ?? '';
     document.getElementById('recipe-ingredients').value = r.ingredients;
     document.getElementById('recipe-instructions').value = r.recipe || '';
     document.getElementById('recipe-shopping').value = r.shopping_list;
     document.getElementById('recipe-extra').value = r.extra_info || '';
+    setFreezerFriendly(Boolean(r.freezer_friendly));
     setSelectedCategories(r.categories || []);
     if (r.image_path) {
       const prev = document.getElementById('image-preview');
@@ -242,11 +260,12 @@ const RecipesPage = (() => {
   }
 
   function clearForm() {
-    ['recipe-id', 'recipe-title', 'recipe-ingredients', 'recipe-instructions', 'recipe-shopping', 'recipe-extra', 'recipe-cooking-time'].forEach(id => {
+    ['recipe-id', 'recipe-title', 'recipe-ingredients', 'recipe-instructions', 'recipe-shopping', 'recipe-extra', 'recipe-active-cooking-time', 'recipe-cooking-time'].forEach(id => {
       document.getElementById(id).value = '';
     });
     document.getElementById('recipe-method').value = 'boiling';
     document.getElementById('recipe-servings').value = 4;
+    setFreezerFriendly(false);
     setSelectedCategories(['закуска']);
     document.getElementById('recipe-image').value = '';
     document.getElementById('image-preview').style.display = 'none';
@@ -330,6 +349,19 @@ const RecipesPage = (() => {
     return [...selectedCategories];
   }
 
+  function setFreezerFriendly(isFreezerFriendly) {
+    const yes = document.getElementById('recipe-freezer-yes');
+    const no = document.getElementById('recipe-freezer-no');
+    if (!yes || !no) return;
+
+    yes.checked = Boolean(isFreezerFriendly);
+    no.checked = !Boolean(isFreezerFriendly);
+  }
+
+  function getFreezerFriendly() {
+    return Boolean(document.getElementById('recipe-freezer-yes')?.checked);
+  }
+
   function getCategoryOptionsHtml() {
     const selected = new Set(selectedCategories);
     return RECIPE_CATEGORIES
@@ -361,10 +393,15 @@ const RecipesPage = (() => {
     fd.append('shopping_list', shopping_list);
     fd.append('cooking_method', document.getElementById('recipe-method').value);
     fd.append('servings', document.getElementById('recipe-servings').value);
+    const activeCookingTimeValue = document.getElementById('recipe-active-cooking-time').value.trim();
+    if (activeCookingTimeValue) {
+      fd.append('active_cooking_time_minutes', activeCookingTimeValue);
+    }
     const cookingTimeValue = document.getElementById('recipe-cooking-time').value.trim();
     if (cookingTimeValue) {
       fd.append('cooking_time_minutes', cookingTimeValue);
     }
+    fd.append('freezer_friendly', String(getFreezerFriendly()));
     fd.append('extra_info', document.getElementById('recipe-extra').value);
     const imgFile = document.getElementById('recipe-image').files[0];
     if (imgFile) fd.append('image', imgFile);
@@ -449,6 +486,7 @@ const RecipesPage = (() => {
     closeDetail,
     closeModal,
     previewImage,
+    setFreezerFriendly,
     saveRecipe,
     deleteRecipe,
     recalc,

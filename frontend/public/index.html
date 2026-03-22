@@ -374,6 +374,26 @@ body {
 textarea.form-control { resize: vertical; min-height: 100px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-hint { font-size: 12px; color: var(--c-text-muted); margin-top: 5px; }
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.checkbox-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 2px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  background: white;
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--c-text);
+}
+.checkbox-option input {
+  accent-color: var(--c-primary);
+}
 
 select.form-control {
   appearance: none;
@@ -1077,10 +1097,33 @@ select.form-control[multiple] {
           <label class="form-label">Количество порций</label>
           <input type="number" class="form-control" id="recipe-servings" min="1" max="50" value="4"/>
         </div>
+      </div>
+      <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Время приготовления (мин)</label>
+          <label class="form-label">Активное время приготовления (мин)</label>
+          <input type="number" class="form-control" id="recipe-active-cooking-time" min="1" max="1440" placeholder="Например, 15"/>
+          <p class="form-hint">Необязательное поле</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Общее время приготовления (мин)</label>
           <input type="number" class="form-control" id="recipe-cooking-time" min="1" max="1440" placeholder="Например, 25"/>
           <p class="form-hint">Необязательное поле</p>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="grid-column:1/-1">
+          <label class="form-label">Заготовка для морозильной камеры</label>
+          <div class="checkbox-group" role="group" aria-label="Заготовка для морозильной камеры">
+            <label class="checkbox-option">
+              <input type="checkbox" id="recipe-freezer-yes" onchange="RecipesPage.setFreezerFriendly(true)"/>
+              Да
+            </label>
+            <label class="checkbox-option">
+              <input type="checkbox" id="recipe-freezer-no" checked onchange="RecipesPage.setFreezerFriendly(false)"/>
+              Нет
+            </label>
+          </div>
+          <p class="form-hint">По умолчанию — нет</p>
         </div>
       </div>
       <div class="form-group">

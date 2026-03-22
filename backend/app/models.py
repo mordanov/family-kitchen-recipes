@@ -59,6 +59,8 @@ class Recipe(Base):
     cooking_method = Column(SAEnum(CookingMethod), nullable=False, default=CookingMethod.boiling)
     servings = Column(Integer, nullable=False, default=4)
     cooking_time_minutes = Column(Integer, nullable=True)
+    active_cooking_time_minutes = Column(Integer, nullable=True)
+    freezer_friendly = Column(Boolean, nullable=False, default=False)
     extra_info = Column(Text, nullable=True)
     image_path = Column(String(500), nullable=True)
 
