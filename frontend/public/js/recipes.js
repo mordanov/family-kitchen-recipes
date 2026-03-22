@@ -205,7 +205,7 @@ const RecipesPage = (() => {
     const additionalMaterial = additionalMaterialPath
       ? `<div class="section-title">📄 Дополнительный материал</div>
          <div class="ingredients-text" style="border-color:var(--c-border)">Файл: ${escapeHtml(additionalMaterialName)}</div>
-         <div style="display:flex;gap:8px;flex-wrap:wrap">
+         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--spacing-sm,8px)">
            <button class="btn btn-secondary btn-sm" onclick='RecipesPage.openDocumentViewer(${JSON.stringify(additionalMaterialPath)}, ${JSON.stringify(r.title || "")})'>👁️ Открыть в окне</button>
            <a class="btn btn-secondary btn-sm" href="${materialDownloadUrl}" download="${escapeHtml(additionalMaterialName)}">⬇️ Скачать PDF</a>
            <button class="btn btn-danger btn-sm" onclick="RecipesPage.removeAdditionalMaterial(${r.id})">🗑️ Удалить материал</button>
