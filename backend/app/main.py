@@ -26,7 +26,9 @@ app.include_router(members.router, prefix="/api/members", tags=["members"])
 
 # Static files for uploaded images
 os.makedirs("/app/uploads", exist_ok=True)
+os.makedirs("/app/documents", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="/app/uploads"), name="uploads")
+app.mount("/documents", StaticFiles(directory="/app/documents"), name="documents")
 
 @app.get("/api/health")
 async def health():

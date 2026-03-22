@@ -484,6 +484,22 @@ select.form-control[multiple] {
   border-radius: 8px;
   margin: 10px auto 0;
 }
+.document-upload-info {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--c-text-muted);
+  display: none;
+}
+.document-viewer-modal {
+  max-width: 960px;
+}
+.document-viewer-frame {
+  width: 100%;
+  height: min(75vh, 860px);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: #f7f7f7;
+}
 
 /* ─── RECIPE DETAIL ─── */
 .recipe-detail-header {
@@ -1158,6 +1174,18 @@ select.form-control[multiple] {
           <img id="image-preview" class="image-preview" style="display:none"/>
         </div>
       </div>
+      <div class="form-group">
+        <label class="form-label">Дополнительный материал</label>
+        <div class="image-upload-area" id="document-upload-area">
+          <input type="file" id="recipe-material" accept="application/pdf" onchange="RecipesPage.previewDocument(this)"/>
+          <div id="document-upload-placeholder">
+            <div style="font-size:32px">📄</div>
+            <div style="font-weight:700;margin-top:8px">Нажмите или перетащите документ</div>
+            <div style="font-size:13px;color:var(--c-text-muted);margin-top:4px">Только PDF</div>
+          </div>
+          <div id="document-upload-filename" class="document-upload-info"></div>
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="RecipesPage.closeModal()">Отмена</button>
@@ -1180,6 +1208,19 @@ select.form-control[multiple] {
       </div>
     </div>
     <div class="modal-body" id="recipe-detail-body"></div>
+  </div>
+</div>
+
+<!-- Document Viewer Modal -->
+<div class="modal-backdrop" id="modal-document-viewer">
+  <div class="modal document-viewer-modal">
+    <div class="modal-header">
+      <h2 id="document-viewer-title">Дополнительный материал</h2>
+      <button class="modal-close" onclick="RecipesPage.closeDocumentViewer()">✕</button>
+    </div>
+    <div class="modal-body">
+      <iframe id="document-viewer-frame" class="document-viewer-frame" title="PDF document viewer"></iframe>
+    </div>
   </div>
 </div>
 

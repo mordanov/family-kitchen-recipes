@@ -33,11 +33,16 @@ function renderRecipeFormShell() {
       <textarea id="recipe-extra"></textarea>
       <div id="recipe-categories-editor"></div>
       <input id="recipe-image" type="file" />
+      <input id="recipe-material" type="file" />
       <img id="image-preview" alt="preview" src="data:,preview" style="display:none" />
       <div id="image-upload-placeholder" style="display:block"></div>
+      <div id="document-upload-filename" style="display:none"></div>
       <input id="recipe-freezer-yes" type="checkbox" />
       <input id="recipe-freezer-no" type="checkbox" checked />
     </div>
+    <div id="modal-document-viewer" class="modal-backdrop"></div>
+    <iframe id="document-viewer-frame"></iframe>
+    <div id="document-viewer-title"></div>
   `
 }
 
@@ -74,6 +79,7 @@ describe('RecipesPage', () => {
         cooking_time_minutes: 15,
         active_cooking_time_minutes: 5,
         freezer_friendly: true,
+        additional_material_path: '/documents/blini.pdf',
         kbju_calculated: true,
         calories: 120,
         proteins: 5,
@@ -97,6 +103,7 @@ describe('RecipesPage', () => {
     expect(gridText).toContain('15 мин')
     expect(gridText).toContain('5 мин активно')
     expect(gridText).toContain('Для морозилки')
+    expect(gridText).toContain('PDF')
   })
 
   it('saves active cooking time and freezer flag from the recipe form', async () => {

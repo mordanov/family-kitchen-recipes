@@ -77,6 +77,9 @@ const RecipesPage = (() => {
     const freezerFriendlyBadge = r.freezer_friendly
       ? '<span class="badge">❄️ Для морозилки</span>'
       : ''
+    const materialBadge = r.additional_material_path
+      ? '<span class="badge">📄 PDF</span>'
+      : ''
 
     return `
       <div class="recipe-card" onclick="RecipesPage.openDetail(${r.id})">
@@ -89,6 +92,7 @@ const RecipesPage = (() => {
             ${cookingTimeBadge}
             ${activeCookingTimeBadge}
             ${freezerFriendlyBadge}
+            ${materialBadge}
             ${categoryBadges}
           </div>
           ${kbju}
@@ -195,6 +199,15 @@ const RecipesPage = (() => {
          <div class="ingredients-text" style="border-color:var(--c-secondary)">${r.extra_info}</div>`
       : '';
 
+    const additionalMaterialPath = r.additional_material_path || '';
+    const additionalMaterial = additionalMaterialPath
+      ? `<div class="section-title">📄 Дополнительный материал</div>
+         <div style="display:flex;gap:8px;flex-wrap:wrap">
+           <button class="btn btn-secondary btn-sm" onclick='RecipesPage.openDocumentViewer(${JSON.stringify(additionalMaterialPath)}, ${JSON.stringify(r.title || "")})'>👁️ Открыть в окне</button>
+           <a class="btn btn-secondary btn-sm" href="${additionalMaterialPath}" target="_blank" rel="noopener noreferrer">⬇️ Скачать PDF</a>
+         </div>`
+      : '';
+
     document.getElementById('recipe-detail-body').innerHTML = `
       <div class="recipe-detail-header">
         <div class="recipe-detail-img">${img}</div>
@@ -218,6 +231,7 @@ const RecipesPage = (() => {
       <div class="ingredients-text">${r.ingredients || '<em>Не указаны</em>'}</div>
       ${recipeText}
       ${shopping}
+      ${additionalMaterial}
       ${extra}`;
   }
 
@@ -249,6 +263,7 @@ const RecipesPage = (() => {
     document.getElementById('recipe-shopping').value = r.shopping_list;
     document.getElementById('recipe-extra').value = r.extra_info || '';
     setFreezerFriendly(Boolean(r.freezer_friendly));
+    setDocumentInfo(r.additional_material_path || null);
     setSelectedCategories(r.categories || []);
     if (r.image_path) {
       const prev = document.getElementById('image-preview');
@@ -277,7 +292,9 @@ const RecipesPage = (() => {
     setFreezerFriendly(false);
     setSelectedCategories(['закуска']);
     document.getElementById('recipe-image').value = '';
+    document.getElementById('recipe-material').value = '';
     resetImagePreview();
+    setDocumentInfo(null);
   }
 
   function closeModal() {
@@ -296,6 +313,57 @@ const RecipesPage = (() => {
       document.getElementById('image-upload-placeholder').style.display = 'none';
     };
     reader.readAsDataURL(file);
+  }
+
+  function setDocumentInfo(documentPathOrName) {
+    const info = document.getElementById('document-upload-filename');
+    if (!info) return;
+
+    if (!documentPathOrName) {
+      info.textContent = '';
+      info.style.display = 'none';
+      return;
+    }
+
+    const fileName = String(documentPathOrName).split('/').pop() || 'PDF документ';
+    info.textContent = `Выбран файл: ${fileName}`;
+    info.style.display = 'block';
+  }
+
+  function previewDocument(input) {
+    const file = input.files?.[0];
+    if (!file) {
+      setDocumentInfo(null);
+      return;
+    }
+
+    const isPdfByMime = (file.type || '').toLowerCase() === 'application/pdf';
+    const isPdfByName = (file.name || '').toLowerCase().endsWith('.pdf');
+    if (!isPdfByMime && !isPdfByName) {
+      input.value = '';
+      setDocumentInfo(null);
+      App.toast('Можно загрузить только PDF документ', 'error');
+      return;
+    }
+
+    setDocumentInfo(file.name);
+  }
+
+  function openDocumentViewer(documentPath, recipeTitle = '') {
+    if (!documentPath) return;
+    const frame = document.getElementById('document-viewer-frame');
+    const title = document.getElementById('document-viewer-title');
+    if (!frame || !title) return;
+
+    title.textContent = recipeTitle ? `Дополнительный материал: ${recipeTitle}` : 'Дополнительный материал';
+    frame.src = `${documentPath}#toolbar=1&navpanes=0&scrollbar=1`;
+    document.getElementById('modal-document-viewer').classList.add('open');
+  }
+
+  function closeDocumentViewer() {
+    const frame = document.getElementById('document-viewer-frame');
+    if (frame) frame.removeAttribute('src');
+    document.getElementById('modal-document-viewer').classList.remove('open');
   }
 
   function setSelectedCategories(categories) {
@@ -414,6 +482,8 @@ const RecipesPage = (() => {
     fd.append('extra_info', document.getElementById('recipe-extra').value);
     const imgFile = document.getElementById('recipe-image').files[0];
     if (imgFile) fd.append('image', imgFile);
+    const materialFile = document.getElementById('recipe-material').files[0];
+    if (materialFile) fd.append('additional_material', materialFile);
 
     const id = document.getElementById('recipe-id').value;
     try {
@@ -495,6 +565,9 @@ const RecipesPage = (() => {
     closeDetail,
     closeModal,
     previewImage,
+    previewDocument,
+    openDocumentViewer,
+    closeDocumentViewer,
     setFreezerFriendly,
     saveRecipe,
     deleteRecipe,

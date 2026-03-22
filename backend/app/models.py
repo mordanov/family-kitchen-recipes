@@ -61,6 +61,7 @@ class Recipe(Base):
     cooking_time_minutes = Column(Integer, nullable=True)
     active_cooking_time_minutes = Column(Integer, nullable=True)
     freezer_friendly = Column(Boolean, nullable=False, default=False)
+    additional_material_path = Column(String(500), nullable=True)
     extra_info = Column(Text, nullable=True)
     image_path = Column(String(500), nullable=True)
 

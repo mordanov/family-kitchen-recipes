@@ -17,6 +17,28 @@ from app.services.kbju import calculate_kbju
 
 router = APIRouter()
 UPLOAD_DIR = "/app/uploads"
+DOCUMENTS_DIR = "/app/documents"
+
+
+def _validate_pdf_upload(material: UploadFile) -> None:
+    if not material.filename or not material.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=422, detail="Дополнительный материал должен быть PDF-файлом")
+
+    content_type = (material.content_type or "").lower()
+    allowed_types = {"", "application/pdf", "application/x-pdf", "binary/octet-stream", "application/octet-stream"}
+    if content_type not in allowed_types:
+        raise HTTPException(status_code=422, detail="Дополнительный материал должен быть PDF-файлом")
+
+
+async def _save_pdf_upload(material: UploadFile) -> str:
+    _validate_pdf_upload(material)
+    filename = f"{uuid.uuid4()}.pdf"
+    filepath = os.path.join(DOCUMENTS_DIR, filename)
+    os.makedirs(DOCUMENTS_DIR, exist_ok=True)
+    async with aiofiles.open(filepath, "wb") as f:
+        content = await material.read()
+        await f.write(content)
+    return f"/documents/{filename}"
 
 
 async def _collect_feedback_by_recipe(db: AsyncSession):
@@ -145,10 +167,12 @@ async def create_recipe(
     freezer_friendly: bool = Form(default=False),
     extra_info: str = Form(default=""),
     image: Optional[UploadFile] = File(default=None),
+    additional_material: Optional[UploadFile] = File(default=None),
     db: AsyncSession = Depends(get_db),
     _=Depends(get_current_user),
 ):
     image_path = None
+    additional_material_path = None
     if image and image.filename:
         ext = os.path.splitext(image.filename)[1].lower()
         filename = f"{uuid.uuid4()}{ext}"
@@ -158,6 +182,9 @@ async def create_recipe(
             content = await image.read()
             await f.write(content)
         image_path = f"/uploads/{filename}"
+
+    if additional_material and hasattr(additional_material, "filename") and additional_material.filename:
+        additional_material_path = await _save_pdf_upload(additional_material)
 
     payload = _validate_recipe_payload(
         {
@@ -186,6 +213,7 @@ async def create_recipe(
         cooking_time_minutes=payload.cooking_time_minutes,
         active_cooking_time_minutes=payload.active_cooking_time_minutes,
         freezer_friendly=payload.freezer_friendly,
+        additional_material_path=additional_material_path,
         extra_info=payload.extra_info if payload.extra_info else None,
         image_path=image_path,
     )
@@ -225,6 +253,7 @@ async def update_recipe(
     freezer_friendly: bool = Form(default=False),
     extra_info: str = Form(default=""),
     image: Optional[UploadFile] = File(default=None),
+    additional_material: Optional[UploadFile] = File(default=None),
     db: AsyncSession = Depends(get_db),
     _=Depends(get_current_user),
 ):
@@ -246,6 +275,13 @@ async def update_recipe(
             content = await image.read()
             await f.write(content)
         db_recipe.image_path = f"/uploads/{filename}"
+
+    if additional_material and hasattr(additional_material, "filename") and additional_material.filename:
+        if db_recipe.additional_material_path:
+            old_material_path = "/app" + db_recipe.additional_material_path
+            if os.path.exists(old_material_path):
+                os.remove(old_material_path)
+        db_recipe.additional_material_path = await _save_pdf_upload(additional_material)
 
     payload = _validate_recipe_payload(
         {
@@ -296,6 +332,10 @@ async def delete_recipe(recipe_id: int, db: AsyncSession = Depends(get_db), _=De
         old_path = "/app" + recipe.image_path
         if os.path.exists(old_path):
             os.remove(old_path)
+    if recipe.additional_material_path:
+        old_material_path = "/app" + recipe.additional_material_path
+        if os.path.exists(old_material_path):
+            os.remove(old_material_path)
     await db.delete(recipe)
     await db.commit()
     return {"ok": True}
