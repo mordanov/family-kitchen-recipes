@@ -54,6 +54,18 @@ const RecipesPage = (() => {
     });
   }
 
+  function applyPdfScaleValueSafely(scaleValue, retry = true) {
+    if (!pdfViewerInstance) return;
+    try {
+      pdfViewerInstance.currentScaleValue = scaleValue;
+      updatePdfUiState();
+    } catch (error) {
+      if (!retry) return;
+      // PDF.js may throw when modal layout is not fully painted yet.
+      requestAnimationFrame(() => applyPdfScaleValueSafely(scaleValue, false));
+    }
+  }
+
   async function load(search = '') {
     const grid = document.getElementById('recipes-grid');
     grid.innerHTML = '<div class="spinner"></div>';
@@ -408,12 +420,7 @@ const RecipesPage = (() => {
 
     pdfLinkService.setViewer(pdfViewerInstance);
 
-    pdfEventBus.on('pagesinit', async () => {
-      const visible = await waitForPdfContainerVisible();
-      if (!pdfViewerInstance) return;
-      if (visible) {
-        pdfViewerInstance.currentScaleValue = 'page-width';
-      }
+    pdfEventBus.on('pagesinit', () => {
       updatePdfUiState();
     });
     pdfEventBus.on('pagechanging', updatePdfUiState);
@@ -506,8 +513,7 @@ const RecipesPage = (() => {
 
     zoomResetBtn.addEventListener('click', () => {
       if (!pdfViewerInstance) return;
-      pdfViewerInstance.currentScaleValue = 'page-width';
-      updatePdfUiState();
+      applyPdfScaleValueSafely('page-width');
     });
 
     searchInput.addEventListener('keydown', (event) => {
@@ -550,6 +556,7 @@ const RecipesPage = (() => {
 
       modal.classList.add('open');
       await waitForPdfContainerVisible();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
 
       if (currentDocumentObjectUrl) {
         URL.revokeObjectURL(currentDocumentObjectUrl);
@@ -566,12 +573,6 @@ const RecipesPage = (() => {
       pdfDocument = loadedDocument;
       pdfViewerInstance.setDocument(pdfDocument);
       pdfLinkService.setDocument(pdfDocument, null);
-
-      // Enforce an initial fit once modal layout is visible to avoid PDF.js scroll errors.
-      if (await waitForPdfContainerVisible()) {
-        pdfViewerInstance.currentScaleValue = 'page-width';
-        updatePdfUiState();
-      }
     } catch (e) {
       App.toast('Не удалось открыть PDF: ' + e.message, 'error');
     }
