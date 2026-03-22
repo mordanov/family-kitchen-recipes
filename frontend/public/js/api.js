@@ -55,6 +55,8 @@ const API = (() => {
     createRecipe:     (fd)          => request('POST', '/recipes/', fd, true),
     updateRecipe:     (id, fd)      => request('PUT',  `/recipes/${id}`, fd, true),
     deleteRecipe:     (id)          => request('DELETE', `/recipes/${id}`),
+    deleteRecipeMaterial: (id)      => request('DELETE', `/recipes/${id}/additional-material`),
+    getRecipeMaterialDownloadUrl: (id) => `/api/recipes/${id}/additional-material/download`,
     recalcKbju:       (id)          => request('POST', `/recipes/${id}/recalculate`),
     kbjuStatus:       (id)          => request('GET',  `/recipes/${id}/kbju-status`),
 

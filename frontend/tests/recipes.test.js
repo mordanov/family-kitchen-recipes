@@ -61,6 +61,8 @@ describe('RecipesPage', () => {
       updateRecipe: vi.fn(),
       createRecipe: vi.fn(),
       deleteRecipe: vi.fn(),
+      deleteRecipeMaterial: vi.fn(),
+      getRecipeMaterialDownloadUrl: vi.fn((id) => `/api/recipes/${id}/additional-material/download`),
     })
 
     loadBrowserScript('../../public/js/recipes.js', 'RecipesPage')

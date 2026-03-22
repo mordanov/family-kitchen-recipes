@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import List, Optional
 from pydantic import ValidationError
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -30,15 +31,31 @@ def _validate_pdf_upload(material: UploadFile) -> None:
         raise HTTPException(status_code=422, detail="Дополнительный материал должен быть PDF-файлом")
 
 
-async def _save_pdf_upload(material: UploadFile) -> str:
+def _normalize_original_material_name(filename: Optional[str]) -> str:
+    cleaned = os.path.basename((filename or "").strip())
+    if not cleaned:
+        return "material.pdf"
+    return cleaned[:255]
+
+
+def _remove_additional_material_file(material_path: Optional[str]) -> None:
+    if not material_path:
+        return
+    old_material_path = "/app" + material_path
+    if os.path.exists(old_material_path):
+        os.remove(old_material_path)
+
+
+async def _save_pdf_upload(material: UploadFile) -> tuple[str, str]:
     _validate_pdf_upload(material)
+    original_name = _normalize_original_material_name(material.filename)
     filename = f"{uuid.uuid4()}.pdf"
     filepath = os.path.join(DOCUMENTS_DIR, filename)
     os.makedirs(DOCUMENTS_DIR, exist_ok=True)
     async with aiofiles.open(filepath, "wb") as f:
         content = await material.read()
         await f.write(content)
-    return f"/documents/{filename}"
+    return f"/documents/{filename}", original_name
 
 
 async def _collect_feedback_by_recipe(db: AsyncSession):
@@ -173,6 +190,7 @@ async def create_recipe(
 ):
     image_path = None
     additional_material_path = None
+    additional_material_original_name = None
     if image and image.filename:
         ext = os.path.splitext(image.filename)[1].lower()
         filename = f"{uuid.uuid4()}{ext}"
@@ -184,7 +202,7 @@ async def create_recipe(
         image_path = f"/uploads/{filename}"
 
     if additional_material and hasattr(additional_material, "filename") and additional_material.filename:
-        additional_material_path = await _save_pdf_upload(additional_material)
+        additional_material_path, additional_material_original_name = await _save_pdf_upload(additional_material)
 
     payload = _validate_recipe_payload(
         {
@@ -214,6 +232,7 @@ async def create_recipe(
         active_cooking_time_minutes=payload.active_cooking_time_minutes,
         freezer_friendly=payload.freezer_friendly,
         additional_material_path=additional_material_path,
+        additional_material_original_name=additional_material_original_name,
         extra_info=payload.extra_info if payload.extra_info else None,
         image_path=image_path,
     )
@@ -277,11 +296,11 @@ async def update_recipe(
         db_recipe.image_path = f"/uploads/{filename}"
 
     if additional_material and hasattr(additional_material, "filename") and additional_material.filename:
-        if db_recipe.additional_material_path:
-            old_material_path = "/app" + db_recipe.additional_material_path
-            if os.path.exists(old_material_path):
-                os.remove(old_material_path)
-        db_recipe.additional_material_path = await _save_pdf_upload(additional_material)
+        _remove_additional_material_file(db_recipe.additional_material_path)
+        (
+            db_recipe.additional_material_path,
+            db_recipe.additional_material_original_name,
+        ) = await _save_pdf_upload(additional_material)
 
     payload = _validate_recipe_payload(
         {
@@ -332,13 +351,52 @@ async def delete_recipe(recipe_id: int, db: AsyncSession = Depends(get_db), _=De
         old_path = "/app" + recipe.image_path
         if os.path.exists(old_path):
             os.remove(old_path)
-    if recipe.additional_material_path:
-        old_material_path = "/app" + recipe.additional_material_path
-        if os.path.exists(old_material_path):
-            os.remove(old_material_path)
+    _remove_additional_material_file(recipe.additional_material_path)
     await db.delete(recipe)
     await db.commit()
     return {"ok": True}
+
+
+@router.delete("/{recipe_id}/additional-material", response_model=RecipeOut)
+async def delete_additional_material(
+    recipe_id: int,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    result = await db.execute(select(Recipe).where(Recipe.id == recipe_id))
+    recipe = result.scalar_one_or_none()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    _remove_additional_material_file(recipe.additional_material_path)
+    recipe.additional_material_path = None
+    recipe.additional_material_original_name = None
+    await db.commit()
+    await db.refresh(recipe)
+
+    feedback_by_recipe = await _collect_feedback_by_recipe(db)
+    return _build_recipe_out(recipe, feedback_by_recipe)
+
+
+@router.get("/{recipe_id}/additional-material/download")
+async def download_additional_material(
+    recipe_id: int,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    result = await db.execute(select(Recipe).where(Recipe.id == recipe_id))
+    recipe = result.scalar_one_or_none()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    if not recipe.additional_material_path:
+        raise HTTPException(status_code=404, detail="Дополнительный материал не найден")
+
+    file_path = "/app" + recipe.additional_material_path
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Дополнительный материал не найден")
+
+    download_name = _normalize_original_material_name(recipe.additional_material_original_name)
+    return FileResponse(file_path, media_type="application/pdf", filename=download_name)
 
 
 @router.get("/{recipe_id}/kbju-status")

@@ -200,11 +200,15 @@ const RecipesPage = (() => {
       : '';
 
     const additionalMaterialPath = r.additional_material_path || '';
+    const additionalMaterialName = r.additional_material_original_name || 'material.pdf';
+    const materialDownloadUrl = API.getRecipeMaterialDownloadUrl(r.id);
     const additionalMaterial = additionalMaterialPath
       ? `<div class="section-title">📄 Дополнительный материал</div>
+         <div class="ingredients-text" style="border-color:var(--c-border)">Файл: ${escapeHtml(additionalMaterialName)}</div>
          <div style="display:flex;gap:8px;flex-wrap:wrap">
            <button class="btn btn-secondary btn-sm" onclick='RecipesPage.openDocumentViewer(${JSON.stringify(additionalMaterialPath)}, ${JSON.stringify(r.title || "")})'>👁️ Открыть в окне</button>
-           <a class="btn btn-secondary btn-sm" href="${additionalMaterialPath}" target="_blank" rel="noopener noreferrer">⬇️ Скачать PDF</a>
+           <a class="btn btn-secondary btn-sm" href="${materialDownloadUrl}" download="${escapeHtml(additionalMaterialName)}">⬇️ Скачать PDF</a>
+           <button class="btn btn-danger btn-sm" onclick="RecipesPage.removeAdditionalMaterial(${r.id})">🗑️ Удалить материал</button>
          </div>`
       : '';
 
@@ -263,7 +267,7 @@ const RecipesPage = (() => {
     document.getElementById('recipe-shopping').value = r.shopping_list;
     document.getElementById('recipe-extra').value = r.extra_info || '';
     setFreezerFriendly(Boolean(r.freezer_friendly));
-    setDocumentInfo(r.additional_material_path || null);
+    setDocumentInfo(r.additional_material_original_name || r.additional_material_path || null);
     setSelectedCategories(r.categories || []);
     if (r.image_path) {
       const prev = document.getElementById('image-preview');
@@ -325,8 +329,7 @@ const RecipesPage = (() => {
       return;
     }
 
-    const fileName = String(documentPathOrName).split('/').pop() || 'PDF документ';
-    info.textContent = `Выбран файл: ${fileName}`;
+    info.textContent = `Выбран файл: ${String(documentPathOrName)}`;
     info.style.display = 'block';
   }
 
@@ -514,6 +517,18 @@ const RecipesPage = (() => {
     }
   }
 
+  async function removeAdditionalMaterial(id) {
+    if (!confirm('Удалить дополнительный материал из рецепта?')) return;
+    try {
+      const updated = await API.deleteRecipeMaterial(id);
+      recipes = recipes.map(item => (item.id === updated.id ? updated : item));
+      renderDetail(updated);
+      App.toast('Дополнительный материал удалён', 'success');
+    } catch (e) {
+      App.toast('Ошибка удаления материала: ' + e.message, 'error');
+    }
+  }
+
   async function recalc(id) {
     try {
       await API.recalcKbju(id);
@@ -571,6 +586,7 @@ const RecipesPage = (() => {
     setFreezerFriendly,
     saveRecipe,
     deleteRecipe,
+    removeAdditionalMaterial,
     recalc,
     getAll,
     startKbjuPolling,

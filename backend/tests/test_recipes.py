@@ -2,7 +2,7 @@ import pytest
 from fastapi import BackgroundTasks
 from fastapi import HTTPException
 
-from app.api.recipes import get_recipe, list_recipes, update_recipe
+from app.api.recipes import delete_additional_material, get_recipe, list_recipes, update_recipe
 from app.models import CookingMethod, FamilyMember, Recipe
 
 
@@ -39,6 +39,7 @@ async def test_list_recipes_returns_member_feedback(session):
     assert by_title["Пирог"].member_feedback == []
     assert by_title["Суп"].active_cooking_time_minutes is None
     assert by_title["Суп"].freezer_friendly is False
+    assert by_title["Суп"].additional_material_original_name is None
 
     statuses = {(item.member_name, item.status, item.member_color) for item in by_title["Суп"].member_feedback}
     assert ("Алиса", "preferred", "#4ECDC4") in statuses
@@ -146,3 +147,26 @@ async def test_update_recipe_rejects_active_time_greater_than_total(session):
 
     assert exc_info.value.status_code == 422
     assert "Активное время приготовления" in exc_info.value.detail
+
+
+@pytest.mark.asyncio
+async def test_delete_additional_material_clears_path_and_original_name(session):
+    recipe = Recipe(
+        title="Паста",
+        categories=["гарнир"],
+        ingredients="макароны",
+        shopping_list="макароны",
+        cooking_method=CookingMethod.boiling,
+        servings=2,
+        additional_material_path="/documents/test-material.pdf",
+        additional_material_original_name="Паста-инструкция.pdf",
+    )
+    session.add(recipe)
+    await session.commit()
+    await session.refresh(recipe)
+
+    out = await delete_additional_material(recipe_id=recipe.id, db=session, _=None)
+
+    assert out.additional_material_path is None
+    assert out.additional_material_original_name is None
+

@@ -29,6 +29,7 @@ class RecipeBase(BaseModel):
     active_cooking_time_minutes: Optional[int] = Field(default=None, ge=1, le=1440)
     freezer_friendly: bool = False
     additional_material_path: Optional[str] = None
+    additional_material_original_name: Optional[str] = None
     extra_info: Optional[str] = None
 
     @field_validator("categories")
