@@ -66,6 +66,10 @@ const RecipesPage = (() => {
     }
   }
 
+  function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   async function load(search = '') {
     const grid = document.getElementById('recipes-grid');
     grid.innerHTML = '<div class="spinner"></div>';
@@ -531,21 +535,12 @@ const RecipesPage = (() => {
   async function openDocumentViewer(recipeId, recipeTitle = '') {
     if (!recipeId) return;
     const title = document.getElementById('document-viewer-title');
-    if (!title) return;
-
-    const initialized = ensurePdfViewerInitialized();
-    bindPdfControls();
-    if (!initialized || !pdfViewerInstance) {
-      App.toast('PDF просмотрщик не инициализирован', 'error');
-      return;
-    }
+    const modal = document.getElementById('modal-document-viewer');
+    if (!title || !modal) return;
 
     try {
       const blob = await API.downloadRecipeMaterial(recipeId);
       if (!blob) return;
-
-      const modal = document.getElementById('modal-document-viewer');
-      if (!modal) return;
 
       title.textContent = recipeTitle ? `Дополнительный материал: ${recipeTitle}` : 'Дополнительный материал';
       const findInfo = document.getElementById('document-find-info');
@@ -555,6 +550,16 @@ const RecipesPage = (() => {
       lastPdfQuery = '';
 
       modal.classList.add('open');
+      // Modal uses animation; wait a bit before PDF.js touches layout-dependent APIs.
+      await delay(120);
+
+      const initialized = ensurePdfViewerInitialized();
+      bindPdfControls();
+      if (!initialized || !pdfViewerInstance) {
+        App.toast('PDF просмотрщик не инициализирован', 'error');
+        return;
+      }
+
       await waitForPdfContainerVisible();
       await new Promise((resolve) => requestAnimationFrame(resolve));
 
