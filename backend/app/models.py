@@ -34,6 +34,7 @@ ALLOWED_RECIPE_CATEGORIES = (
     "морепродукты",
     "субпродукты",
     "высокобелковые продукты",
+    "напитки",
 )
 
 DEFAULT_RECIPE_CATEGORY = "закуска"
@@ -57,6 +58,7 @@ class Recipe(Base):
     shopping_list = Column(Text, nullable=False, default="")
     cooking_method = Column(SAEnum(CookingMethod), nullable=False, default=CookingMethod.boiling)
     servings = Column(Integer, nullable=False, default=4)
+    cooking_time_minutes = Column(Integer, nullable=True)
     extra_info = Column(Text, nullable=True)
     image_path = Column(String(500), nullable=True)
 

@@ -25,6 +25,7 @@ class RecipeBase(BaseModel):
     shopping_list: str = ""
     cooking_method: CookingMethod = CookingMethod.boiling
     servings: int = Field(default=4, ge=1, le=50)
+    cooking_time_minutes: Optional[int] = Field(default=None, ge=1, le=1440)
     extra_info: Optional[str] = None
 
     @field_validator("categories")

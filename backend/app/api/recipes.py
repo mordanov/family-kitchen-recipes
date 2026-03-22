@@ -140,6 +140,7 @@ async def create_recipe(
     shopping_list: str = Form(default=""),
     cooking_method: CookingMethod = Form(default=CookingMethod.boiling),
     servings: int = Form(default=4),
+    cooking_time_minutes: Optional[int] = Form(default=None),
     extra_info: str = Form(default=""),
     image: Optional[UploadFile] = File(default=None),
     db: AsyncSession = Depends(get_db),
@@ -165,6 +166,7 @@ async def create_recipe(
             "shopping_list": shopping_list,
             "cooking_method": cooking_method,
             "servings": servings,
+            "cooking_time_minutes": cooking_time_minutes,
             "extra_info": extra_info,
         }
     )
@@ -177,6 +179,7 @@ async def create_recipe(
         shopping_list=payload.shopping_list,
         cooking_method=payload.cooking_method,
         servings=payload.servings,
+        cooking_time_minutes=payload.cooking_time_minutes,
         extra_info=payload.extra_info if payload.extra_info else None,
         image_path=image_path,
     )
@@ -211,6 +214,7 @@ async def update_recipe(
     shopping_list: str = Form(default=""),
     cooking_method: CookingMethod = Form(default=CookingMethod.boiling),
     servings: int = Form(default=4),
+    cooking_time_minutes: Optional[int] = Form(default=None),
     extra_info: str = Form(default=""),
     image: Optional[UploadFile] = File(default=None),
     db: AsyncSession = Depends(get_db),
@@ -244,6 +248,7 @@ async def update_recipe(
             "shopping_list": shopping_list,
             "cooking_method": cooking_method,
             "servings": servings,
+            "cooking_time_minutes": cooking_time_minutes,
             "extra_info": extra_info,
         }
     )
@@ -255,6 +260,7 @@ async def update_recipe(
     db_recipe.shopping_list = payload.shopping_list
     db_recipe.cooking_method = payload.cooking_method
     db_recipe.servings = payload.servings
+    db_recipe.cooking_time_minutes = payload.cooking_time_minutes
     db_recipe.extra_info = payload.extra_info if payload.extra_info else None
     db_recipe.kbju_calculated = False  # Reset, will recalculate
 

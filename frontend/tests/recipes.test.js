@@ -39,10 +39,12 @@ describe('RecipesPage', () => {
       {
         id: 10,
         title: 'Блины',
+        categories: ['напитки'],
         ingredients: 'Мука',
         shopping_list: 'Мука',
         cooking_method: 'boiling',
         servings: 2,
+        cooking_time_minutes: 15,
         kbju_calculated: true,
         calories: 120,
         proteins: 5,
@@ -62,6 +64,8 @@ describe('RecipesPage', () => {
     expect(gridText).toContain('Борис')
     expect(gridText).toContain('❤️')
     expect(gridText).toContain('💔')
+    expect(gridText).toContain('напитки')
+    expect(gridText).toContain('15 мин')
   })
 })
 

@@ -13,6 +13,7 @@ const RECIPE_CATEGORIES = [
   'морепродукты',
   'субпродукты',
   'высокобелковые продукты',
+  'напитки',
 ]
 
 const RecipesPage = (() => {
@@ -67,6 +68,10 @@ const RecipesPage = (() => {
       .map(c => `<span class="badge badge-accent">${escapeHtml(c)}</span>`)
       .join('')
 
+    const cookingTimeBadge = Number.isFinite(r.cooking_time_minutes)
+      ? `<span class="badge">⏱ ${r.cooking_time_minutes} мин</span>`
+      : ''
+
     return `
       <div class="recipe-card" onclick="RecipesPage.openDetail(${r.id})">
         <div class="recipe-card-img">${img}</div>
@@ -75,6 +80,7 @@ const RecipesPage = (() => {
           <div class="recipe-card-meta">
             <span class="badge badge-primary">${App.cookingMethodLabel(r.cooking_method)}</span>
             <span class="badge">${r.servings} порц.</span>
+            ${cookingTimeBadge}
             ${categoryBadges}
           </div>
           ${kbju}
@@ -156,6 +162,10 @@ const RecipesPage = (() => {
       .map(c => `<span class="badge badge-accent">${escapeHtml(c)}</span>`)
       .join('') || '<em>Не указаны</em>'
 
+    const cookingTimeBadge = Number.isFinite(r.cooking_time_minutes)
+      ? `<span class="badge">⏱ ${r.cooking_time_minutes} мин</span>`
+      : ''
+
     const recipeText = r.recipe
       ? `<div class="section-title">👨‍🍳 Рецепт</div>
          <div class="ingredients-text" style="border-color:var(--c-accent)">${r.recipe}</div>`
@@ -179,6 +189,7 @@ const RecipesPage = (() => {
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <span class="badge badge-primary">${App.cookingMethodLabel(r.cooking_method)}</span>
             <span class="badge">${r.servings} порций</span>
+            ${cookingTimeBadge}
             <span class="badge" style="font-size:11px;color:var(--c-text-muted)">Обновлён: ${App.formatDate(r.updated_at)}</span>
           </div>
           ${renderMemberFeedback(r, false)}
@@ -215,6 +226,7 @@ const RecipesPage = (() => {
     document.getElementById('recipe-title').value = r.title;
     document.getElementById('recipe-method').value = r.cooking_method;
     document.getElementById('recipe-servings').value = r.servings;
+    document.getElementById('recipe-cooking-time').value = r.cooking_time_minutes ?? '';
     document.getElementById('recipe-ingredients').value = r.ingredients;
     document.getElementById('recipe-instructions').value = r.recipe || '';
     document.getElementById('recipe-shopping').value = r.shopping_list;
@@ -230,7 +242,7 @@ const RecipesPage = (() => {
   }
 
   function clearForm() {
-    ['recipe-id', 'recipe-title', 'recipe-ingredients', 'recipe-instructions', 'recipe-shopping', 'recipe-extra'].forEach(id => {
+    ['recipe-id', 'recipe-title', 'recipe-ingredients', 'recipe-instructions', 'recipe-shopping', 'recipe-extra', 'recipe-cooking-time'].forEach(id => {
       document.getElementById(id).value = '';
     });
     document.getElementById('recipe-method').value = 'boiling';
@@ -349,6 +361,10 @@ const RecipesPage = (() => {
     fd.append('shopping_list', shopping_list);
     fd.append('cooking_method', document.getElementById('recipe-method').value);
     fd.append('servings', document.getElementById('recipe-servings').value);
+    const cookingTimeValue = document.getElementById('recipe-cooking-time').value.trim();
+    if (cookingTimeValue) {
+      fd.append('cooking_time_minutes', cookingTimeValue);
+    }
     fd.append('extra_info', document.getElementById('recipe-extra').value);
     const imgFile = document.getElementById('recipe-image').files[0];
     if (imgFile) fd.append('image', imgFile);

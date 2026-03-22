@@ -84,12 +84,13 @@ async def test_update_recipe_accepts_recipe_text(session):
         recipe_id=recipe.id,
         background_tasks=BackgroundTasks(),
         title="Котлеты домашние",
-        categories=["мясо", "закуска"],
+        categories=["мясо", "напитки"],
         ingredients="мясо\nлук",
         recipe="Смешать фарш, сформировать котлеты и обжарить",
         shopping_list="мясо\nлук",
         cooking_method=CookingMethod.frying,
         servings=4,
+        cooking_time_minutes=35,
         extra_info="",
         image=None,
         db=session,
@@ -98,4 +99,5 @@ async def test_update_recipe_accepts_recipe_text(session):
 
     assert out.title == "Котлеты домашние"
     assert out.recipe == "Смешать фарш, сформировать котлеты и обжарить"
-    assert out.categories == ["мясо", "закуска"]
+    assert out.categories == ["мясо", "напитки"]
+    assert out.cooking_time_minutes == 35
