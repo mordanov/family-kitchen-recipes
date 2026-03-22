@@ -43,6 +43,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: recipes_frontend
+    environment:
+      BACKEND_ORIGIN: http://backend:8000
     restart: unless-stopped
 
 
