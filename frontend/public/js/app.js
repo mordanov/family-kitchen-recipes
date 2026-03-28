@@ -116,12 +116,9 @@ const App = (() => {
       air_fryer: '💨 Аэрогриль',
       baking: '🔥 Запекание',
       raw: '🥗 Сырое',
-      other: '🍽️ Разное',
       sous_vide: '♨️ Су-вид',
-      sauce: '🥣 Соус',
-      sweet_sauce: '🍯 Сладкий соус',
       grill: '🍖 Гриль',
-      waffles: '🧇 Вафли',
+      other: '🍽️ Разное',
     };
     return map[m] || m;
   }

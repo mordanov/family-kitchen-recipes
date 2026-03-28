@@ -21,10 +21,7 @@ class CookingMethod(str, enum.Enum):
     raw = "raw"
     other = "other"
     sous_vide = "sous_vide"
-    sauce = "sauce"
-    sweet_sauce = "sweet_sauce"
     grill = "grill"
-    waffles = "waffles"
 
 
 ALLOWED_RECIPE_CATEGORIES = (
@@ -40,6 +37,9 @@ ALLOWED_RECIPE_CATEGORIES = (
     "субпродукты",
     "высокобелковые продукты",
     "напитки",
+    "вафли",
+    "соус",
+    "сладкий соус",
 )
 
 DEFAULT_RECIPE_CATEGORY = "закуска"
