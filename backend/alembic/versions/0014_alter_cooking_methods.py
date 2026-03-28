@@ -15,17 +15,15 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
+    op.execute("UPDATE recipes SET cooking_method = 'other' WHERE cooking_method IN ('sous_vide', 'sauce', 'sweet_sauce', 'grill', 'waffles')")
+    op.execute("ALTER TABLE recipes ALTER COLUMN cooking_method TYPE VARCHAR(50)")
     op.execute("DROP TYPE cookingmethod")
     op.execute("CREATE TYPE cookingmethod AS ENUM ('boiling', 'frying', 'dry_frying', 'stewing', 'air_fryer', 'baking', 'raw', 'other', 'sous_vide', 'grill')")
+    op.execute("ALTER TABLE recipes ALTER COLUMN cooking_method TYPE cookingmethod USING cooking_method::cookingmethod")
 
 def downgrade() -> None:
-    # Перевести все новые значения в 'boiling' (или другой дефолт)
     op.execute("UPDATE recipes SET cooking_method = 'other' WHERE cooking_method = 'waffles'")
-    # Временно привести колонку к строке
     op.execute("ALTER TABLE recipes ALTER COLUMN cooking_method TYPE VARCHAR(50)")
-    # Удалить старый enum
     op.execute("DROP TYPE cookingmethod")
-    # Воссоздать enum без новых значений
     op.execute("CREATE TYPE cookingmethod AS ENUM ('boiling', 'frying', 'dry_frying', 'stewing', 'air_fryer', 'baking', 'raw', 'other', 'sous_vide', 'sauce', 'sweet_sauce', 'grill', 'waffles')")
-    # Привести колонку обратно к enum
     op.execute("ALTER TABLE recipes ALTER COLUMN cooking_method TYPE cookingmethod USING cooking_method::cookingmethod")
