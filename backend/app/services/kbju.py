@@ -14,6 +14,11 @@ COOKING_METHOD_RU = {
     "baking": "запекание",
     "raw": "в сыром виде",
     "other": "разное",
+    "sous_vide": "су-вид",
+    "sauce": "соус",
+    "sweet_sauce": "сладкий соус",
+    "grill": "гриль",
+    "waffles": "вафли",
 }
 
 
