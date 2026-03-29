@@ -3,12 +3,40 @@ from sqlalchemy.orm import relationship
 from datetime import datetime, date, UTC
 import enum
 
-from app.database import Base
-
+# Корректное определение utcnow
 
 def utcnow() -> datetime:
     # PostgreSQL columns are TIMESTAMP WITHOUT TIME ZONE in current migrations.
     return datetime.now(UTC).replace(tzinfo=None)
+
+from app.database import Base
+
+# --- New models for editable directories ---
+class RecipeCategory(Base):
+    __tablename__ = "recipe_categories"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True, nullable=False)
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+
+class CookingMethodDirectory(Base):
+    __tablename__ = "cooking_methods"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True, nullable=False)
+    emoji = Column(String(10), nullable=True)
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+# Association table for many-to-many Recipe <-> RecipeCategory
+from sqlalchemy import UniqueConstraint
+recipe_categories_association = Table(
+    "recipe_categories_association",
+    Base.metadata,
+    Column("recipe_id", Integer, ForeignKey("recipes.id", ondelete="CASCADE"), primary_key=True),
+    Column("category_id", Integer, ForeignKey("recipe_categories.id", ondelete="CASCADE"), primary_key=True),
+    UniqueConstraint("recipe_id", "category_id", name="uq_recipe_category"),
+)
 
 
 class CookingMethod(str, enum.Enum):
@@ -57,11 +85,19 @@ class Recipe(Base):
     __tablename__ = "recipes"
     id = Column(Integer, primary_key=True)
     title = Column(String(200), nullable=False)
-    categories = Column(JSON, nullable=False, default=lambda: [DEFAULT_RECIPE_CATEGORY])
+    # categories = Column(JSON, nullable=False, default=lambda: [DEFAULT_RECIPE_CATEGORY])
+    categories = relationship(
+        "RecipeCategory",
+        secondary=recipe_categories_association,
+        backref="recipes",
+        lazy="joined",
+    )
     ingredients = Column(Text, nullable=False, default="")
     recipe = Column(Text, nullable=True)
     shopping_list = Column(Text, nullable=False, default="")
-    cooking_method = Column(SAEnum(CookingMethod), nullable=False, default=CookingMethod.boiling)
+    # cooking_method = Column(SAEnum(CookingMethod), nullable=False, default=CookingMethod.boiling)
+    cooking_method_id = Column(Integer, ForeignKey("cooking_methods.id"), nullable=True)
+    cooking_method = relationship("CookingMethodDirectory", lazy="joined")
     servings = Column(Integer, nullable=False, default=4)
     cooking_time_minutes = Column(Integer, nullable=True)
     active_cooking_time_minutes = Column(Integer, nullable=True)

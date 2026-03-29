@@ -1,28 +1,12 @@
 /**
  * Recipes page – list, create, edit, delete, detail view
  */
-const RECIPE_CATEGORIES = [
-  'суп',
-  'мясо',
-  'курица',
-  'рыба',
-  'завтрак',
-  'закуска',
-  'салат',
-  'гарнир',
-  'морепродукты',
-  'субпродукты',
-  'высокобелковые продукты',
-  'напитки',
-  'вафли',
-  'соус',
-  'сладкий соус',
-]
-
 const RecipesPage = (() => {
   let recipes = [];
   let currentRecipeId = null;
   let selectedCategories = [];
+  let loadedCategories = [];
+  let loadedMethods = [];
 
   async function load(search = '') {
     const grid = document.getElementById('recipes-grid');
@@ -360,7 +344,7 @@ const RecipesPage = (() => {
 
     (categories || []).forEach(raw => {
       const category = String(raw || '').trim();
-      if (!category || !RECIPE_CATEGORIES.includes(category)) return;
+      if (!category || !loadedCategories.find(c => c.id === category)) return;
       if (normalized.has(category)) return;
       normalized.add(category);
       selectedCategories.push(category);
@@ -397,10 +381,10 @@ const RecipesPage = (() => {
   function addCategoryFromPicker(value) {
     const category = String(value || '').trim();
     if (!category) return;
-    if (!RECIPE_CATEGORIES.includes(category)) return;
+    const categoryId = category;
 
-    if (!selectedCategories.includes(category)) {
-      selectedCategories.push(category);
+    if (!selectedCategories.includes(categoryId)) {
+      selectedCategories.push(categoryId);
       renderSelectedCategories();
     }
   }
@@ -427,11 +411,42 @@ const RecipesPage = (() => {
     return Boolean(document.getElementById('recipe-freezer-yes')?.checked);
   }
 
+  async function loadDirectories() {
+    loadedCategories = (await API.getRecipeCategories()).filter(c => !c.is_deleted);
+    loadedMethods = (await API.getCookingMethods()).filter(m => !m.is_deleted);
+
+    renderCategoryPicker();
+    renderMethodPicker();
+  }
+
+  function renderCategoryPicker() {
+    const picker = document.getElementById('recipe-category-picker');
+    if (!picker) return;
+
+    picker.innerHTML = getCategoryOptionsHtml();
+    picker.addEventListener('change', event => {
+      addCategoryFromPicker(event.target.value);
+    });
+  }
+
+  function renderMethodPicker() {
+    const picker = document.getElementById('recipe-method');
+    if (!picker) return;
+
+    picker.innerHTML = getMethodOptionsHtml();
+  }
+
   function getCategoryOptionsHtml() {
-    const selected = new Set(selectedCategories);
-    return RECIPE_CATEGORIES
-      .filter(category => !selected.has(category))
-      .map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+    const selected = new Set(selectedCategories.map(c => c.id));
+    return loadedCategories
+      .filter(category => !selected.has(category.id))
+      .map(category => `<option value="${category.id}">${escapeHtml(category.name)}</option>`)
+      .join('');
+  }
+
+  function getMethodOptionsHtml() {
+    return loadedMethods
+      .map(method => `<option value="${method.id}">${escapeHtml(method.emoji || '')} ${escapeHtml(method.name)}</option>`)
       .join('');
   }
 

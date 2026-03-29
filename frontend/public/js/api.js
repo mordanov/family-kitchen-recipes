@@ -124,5 +124,17 @@ const API = (() => {
     removePreferredRecipe: (mid, rid)        => request('DELETE', `/members/${mid}/preferred/${rid}`),
     addDislikedRecipe:   (mid, rid)          => request('POST',   `/members/${mid}/disliked/${rid}`),
     removeDislikedRecipe: (mid, rid)         => request('DELETE', `/members/${mid}/disliked/${rid}`),
+
+    // Directories: Recipe Categories
+    getRecipeCategories: () => request('GET', '/directories/recipe-categories'),
+    createRecipeCategory: (data) => request('POST', '/directories/recipe-categories', data),
+    updateRecipeCategory: (id, data) => request('PUT', `/directories/recipe-categories/${id}`, data),
+    deleteRecipeCategory: (id) => request('DELETE', `/directories/recipe-categories/${id}`),
+
+    // Directories: Cooking Methods
+    getCookingMethods: () => request('GET', '/directories/cooking-methods'),
+    createCookingMethod: (data) => request('POST', '/directories/cooking-methods', data),
+    updateCookingMethod: (id, data) => request('PUT', `/directories/cooking-methods/${id}`, data),
+    deleteCookingMethod: (id) => request('DELETE', `/directories/cooking-methods/${id}`),
   };
 })();
