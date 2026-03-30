@@ -2,25 +2,6 @@
  * Settings page for warehouse matching aliases.
  */
 const SettingsPage = (() => {
-  const QUICK_ACTION_CONFIRM_SKIP_KEY = 'menu.quickActions.skipConfirm';
-
-  function getSkipQuickActionConfirm() {
-    try {
-      return localStorage.getItem(QUICK_ACTION_CONFIRM_SKIP_KEY) === '1';
-    } catch {
-      return false;
-    }
-  }
-
-  function setSkipQuickActionConfirm(skip) {
-    try {
-      if (skip) localStorage.setItem(QUICK_ACTION_CONFIRM_SKIP_KEY, '1');
-      else localStorage.removeItem(QUICK_ACTION_CONFIRM_SKIP_KEY);
-    } catch {
-      // ignore localStorage errors
-    }
-  }
-
   async function load() {
     const content = document.getElementById('settings-content');
     content.innerHTML = '<div class="spinner"></div>';
@@ -33,7 +14,7 @@ const SettingsPage = (() => {
 
       const productText = mapToLines(productRes.aliases || {});
       const phraseText = mapToLines(phraseRes.aliases || {});
-      const skipQuickConfirm = getSkipQuickActionConfirm();
+      const skipQuickConfirm = App.getSkipQuickActionConfirm();
 
       content.innerHTML = `
         <div class="shopping-list-block" style="max-width:900px">
@@ -107,7 +88,7 @@ const SettingsPage = (() => {
   }
 
   function toggleQuickConfirmSkip(checked) {
-    setSkipQuickActionConfirm(!!checked);
+    App.setSkipQuickActionConfirm(!!checked);
     App.toast(checked ? 'Подтверждение быстрых действий отключено' : 'Подтверждение быстрых действий включено', 'success');
   }
 

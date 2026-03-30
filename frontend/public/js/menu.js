@@ -18,27 +18,8 @@ const MenuPage = (() => {
   const MEAL_LABELS = { breakfast: '🌅 Завтрак', lunch: '☀️ Обед', dinner: '🌙 Ужин' };
   const MEAL_ORDER  = ['breakfast', 'lunch', 'dinner'];
   const DAY_LABELS  = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-  const QUICK_ACTION_CONFIRM_SKIP_KEY = 'menu.quickActions.skipConfirm';
-
-  function getSkipQuickActionConfirm() {
-    try {
-      return localStorage.getItem(QUICK_ACTION_CONFIRM_SKIP_KEY) === '1';
-    } catch {
-      return false;
-    }
-  }
-
-  function setSkipQuickActionConfirm(skip) {
-    try {
-      if (skip) localStorage.setItem(QUICK_ACTION_CONFIRM_SKIP_KEY, '1');
-      else localStorage.removeItem(QUICK_ACTION_CONFIRM_SKIP_KEY);
-    } catch {
-      // Ignore localStorage errors in private mode/tests
-    }
-  }
-
   async function confirmQuickAction(message) {
-    if (getSkipQuickActionConfirm()) return true;
+    if (App.getSkipQuickActionConfirm()) return true;
 
     // Fallback for non-browser/test environments
     if (!document?.body) {
@@ -83,7 +64,7 @@ const MenuPage = (() => {
 
       const cleanup = (value) => {
         const skip = !!skipEl?.checked;
-        if (value && skip) setSkipQuickActionConfirm(true);
+        if (value && skip) App.setSkipQuickActionConfirm(true);
         overlay.remove();
         resolve(value);
       };

@@ -127,7 +127,21 @@ const App = (() => {
     return new Date(d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
   }
 
-  return { init, login, logout, navigate, toast, cookingMethodLabel, formatDate };
+  // ── Quick-action confirm preference (shared with SettingsPage) ──
+  const QUICK_ACTION_CONFIRM_SKIP_KEY = 'menu.quickActions.skipConfirm';
+
+  function getSkipQuickActionConfirm() {
+    try { return localStorage.getItem(QUICK_ACTION_CONFIRM_SKIP_KEY) === '1'; } catch { return false; }
+  }
+
+  function setSkipQuickActionConfirm(skip) {
+    try {
+      if (skip) localStorage.setItem(QUICK_ACTION_CONFIRM_SKIP_KEY, '1');
+      else localStorage.removeItem(QUICK_ACTION_CONFIRM_SKIP_KEY);
+    } catch {}
+  }
+
+  return { init, login, logout, navigate, toast, cookingMethodLabel, formatDate, getSkipQuickActionConfirm, setSkipQuickActionConfirm };
 })();
 
 document.addEventListener('DOMContentLoaded', () => App.init());

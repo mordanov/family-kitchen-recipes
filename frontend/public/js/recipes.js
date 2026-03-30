@@ -12,7 +12,11 @@ const RecipesPage = (() => {
     const grid = document.getElementById('recipes-grid');
     grid.innerHTML = '<div class="spinner"></div>';
     try {
-      recipes = await API.listRecipes(search);
+      const [recipesList] = await Promise.all([
+        API.listRecipes(search),
+        loadDirectories().catch(() => {}),
+      ]);
+      recipes = recipesList;
       renderGrid(recipes);
       // If any recipes still need KBJU calculation, start polling
       if (recipes.some(r => !r.kbju_calculated)) startKbjuPolling();
@@ -437,7 +441,7 @@ const RecipesPage = (() => {
   }
 
   function getCategoryOptionsHtml() {
-    const selected = new Set(selectedCategories.map(c => c.id));
+    const selected = new Set(selectedCategories);
     return loadedCategories
       .filter(category => !selected.has(category.id))
       .map(category => `<option value="${category.id}">${escapeHtml(category.name)}</option>`)
