@@ -349,11 +349,15 @@ const RecipesPage = (() => {
     selectedCategories = [];
 
     (categories || []).forEach(raw => {
-      const category = String(raw || '').trim();
-      if (!category || !loadedCategories.find(c => c.id === category)) return;
-      if (normalized.has(category)) return;
-      normalized.add(category);
-      selectedCategories.push(category);
+      const input = String(raw || '').trim();
+      if (!input) return;
+      // Accept either a category name (from API) or a string ID (from form picker)
+      const cat = loadedCategories.find(c => c.name === input || String(c.id) === input);
+      if (!cat) return;
+      const idStr = String(cat.id);
+      if (normalized.has(idStr)) return;
+      normalized.add(idStr);
+      selectedCategories.push(idStr);
     });
 
     renderSelectedCategories();
@@ -364,9 +368,11 @@ const RecipesPage = (() => {
     if (!editor) return;
 
     const chipsHtml = selectedCategories
-      .map(category => (
-        `<span class="category-chip">${escapeHtml(category)}<button type="button" class="category-chip-remove" data-category="${escapeHtml(category)}" aria-label="Удалить категорию">×</button></span>`
-      ))
+      .map(catId => {
+        const cat = loadedCategories.find(c => String(c.id) === catId);
+        const name = cat ? cat.name : catId;
+        return `<span class="category-chip">${escapeHtml(name)}<button type="button" class="category-chip-remove" data-category="${escapeHtml(catId)}" aria-label="Удалить категорию">×</button></span>`;
+      })
       .join('');
 
     editor.classList.toggle('empty', selectedCategories.length === 0);
@@ -445,7 +451,7 @@ const RecipesPage = (() => {
   function getCategoryOptionsHtml() {
     const selected = new Set(selectedCategories);
     return loadedCategories
-      .filter(category => !selected.has(category.id))
+      .filter(category => !selected.has(String(category.id)))
       .map(category => `<option value="${category.id}">${escapeHtml(category.name)}</option>`)
       .join('');
   }

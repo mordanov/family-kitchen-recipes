@@ -3,7 +3,7 @@ from fastapi import BackgroundTasks
 from fastapi import HTTPException
 
 from app.api.recipes import delete_additional_material, get_recipe, list_recipes, update_recipe
-from app.models import CookingMethod, FamilyMember, Recipe
+from app.models import FamilyMember, Recipe, RecipeCategory
 
 
 @pytest.mark.asyncio
@@ -12,14 +12,12 @@ async def test_list_recipes_returns_member_feedback(session):
         title="Суп",
         ingredients="вода",
         shopping_list="вода",
-        cooking_method=CookingMethod.boiling,
         servings=2,
     )
     pie = Recipe(
         title="Пирог",
         ingredients="мука",
         shopping_list="мука",
-        cooking_method=CookingMethod.baking,
         servings=4,
     )
 
@@ -52,7 +50,6 @@ async def test_get_recipe_prefers_disliked_when_member_has_both(session):
         title="Котлеты",
         ingredients="мясо",
         shopping_list="мясо",
-        cooking_method=CookingMethod.frying,
         servings=3,
     )
     member = FamilyMember(name="Вера", color="#AA66CC")
@@ -72,12 +69,18 @@ async def test_get_recipe_prefers_disliked_when_member_has_both(session):
 
 @pytest.mark.asyncio
 async def test_update_recipe_accepts_recipe_text(session):
+    cat_meat = RecipeCategory(name="мясо")
+    cat_drinks = RecipeCategory(name="напитки")
+    session.add_all([cat_meat, cat_drinks])
+    await session.commit()
+    await session.refresh(cat_meat)
+    await session.refresh(cat_drinks)
+
     recipe = Recipe(
         title="Котлеты",
-        categories=["мясо"],
+        categories=[cat_meat],
         ingredients="мясо",
         shopping_list="мясо",
-        cooking_method=CookingMethod.frying,
         servings=3,
     )
     session.add(recipe)
@@ -88,11 +91,11 @@ async def test_update_recipe_accepts_recipe_text(session):
         recipe_id=recipe.id,
         background_tasks=BackgroundTasks(),
         title="Котлеты домашние",
-        categories=["мясо", "напитки"],
+        categories=[cat_meat.id, cat_drinks.id],
         ingredients="мясо\nлук",
         recipe="Смешать фарш, сформировать котлеты и обжарить",
         shopping_list="мясо\nлук",
-        cooking_method=CookingMethod.frying,
+        cooking_method=None,
         servings=4,
         cooking_time_minutes=35,
         active_cooking_time_minutes=20,
@@ -113,12 +116,16 @@ async def test_update_recipe_accepts_recipe_text(session):
 
 @pytest.mark.asyncio
 async def test_update_recipe_rejects_active_time_greater_than_total(session):
+    cat = RecipeCategory(name="мясо")
+    session.add(cat)
+    await session.commit()
+    await session.refresh(cat)
+
     recipe = Recipe(
         title="Рагу",
-        categories=["мясо"],
+        categories=[cat],
         ingredients="мясо",
         shopping_list="мясо",
-        cooking_method=CookingMethod.stewing,
         servings=2,
     )
     session.add(recipe)
@@ -130,11 +137,11 @@ async def test_update_recipe_rejects_active_time_greater_than_total(session):
             recipe_id=recipe.id,
             background_tasks=BackgroundTasks(),
             title="Рагу",
-            categories=["мясо"],
+            categories=[cat.id],
             ingredients="мясо",
             recipe="",
             shopping_list="мясо",
-            cooking_method=CookingMethod.stewing,
+            cooking_method=None,
             servings=2,
             cooking_time_minutes=20,
             active_cooking_time_minutes=25,
@@ -153,10 +160,8 @@ async def test_update_recipe_rejects_active_time_greater_than_total(session):
 async def test_delete_additional_material_clears_path_and_original_name(session):
     recipe = Recipe(
         title="Паста",
-        categories=["гарнир"],
         ingredients="макароны",
         shopping_list="макароны",
-        cooking_method=CookingMethod.boiling,
         servings=2,
         additional_material_path="/documents/test-material.pdf",
         additional_material_original_name="Паста-инструкция.pdf",

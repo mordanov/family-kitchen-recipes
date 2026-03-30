@@ -63,6 +63,8 @@ describe('RecipesPage', () => {
       deleteRecipe: vi.fn(),
       deleteRecipeMaterial: vi.fn(),
       getRecipeMaterialDownloadUrl: vi.fn((id) => `/api/recipes/${id}/additional-material/download`),
+      getRecipeCategories: vi.fn().mockResolvedValue([{ id: 1, name: 'закуска', is_deleted: false }]),
+      getCookingMethods: vi.fn().mockResolvedValue([{ id: 1, emoji: '🫕', name: 'Варка', is_deleted: false }]),
     })
 
     loadBrowserScript('../../public/js/recipes.js', 'RecipesPage')
@@ -113,6 +115,7 @@ describe('RecipesPage', () => {
     window.API.createRecipe.mockResolvedValue({ id: 77 })
     window.API.listRecipes.mockResolvedValue([])
 
+    await window.RecipesPage.reloadDirectories()
     window.RecipesPage.openCreate()
 
     expect(document.getElementById('recipe-freezer-no').checked).toBe(true)
@@ -184,8 +187,10 @@ describe('RecipesPage', () => {
     expect(placeholder.style.display).toBe('block')
   })
 
-  it('resets recipe form state when the modal is closed', () => {
+  it('resets recipe form state when the modal is closed', async () => {
     renderRecipeFormShell()
+
+    await window.RecipesPage.reloadDirectories()
 
     window.RecipesPage.openEdit({
       id: 3,
@@ -194,7 +199,7 @@ describe('RecipesPage', () => {
       ingredients: 'Листы\nФарш',
       recipe: 'Собрать слои',
       shopping_list: 'Листы\nФарш',
-      cooking_method: 'boiling',
+      cooking_method: { id: 1, name: 'Варка', emoji: '🫕' },
       servings: 6,
       cooking_time_minutes: 60,
       active_cooking_time_minutes: 25,
@@ -215,7 +220,7 @@ describe('RecipesPage', () => {
     expect(document.getElementById('recipe-active-cooking-time').value).toBe('')
     expect(document.getElementById('recipe-cooking-time').value).toBe('')
     expect(document.getElementById('recipe-servings').value).toBe('4')
-    expect(document.getElementById('recipe-method').value).toBe('boiling')
+    expect(document.getElementById('recipe-method').value).toBe('1')
     expect(document.getElementById('recipe-freezer-yes').checked).toBe(false)
     expect(document.getElementById('recipe-freezer-no').checked).toBe(true)
     expect(document.getElementById('image-preview').hasAttribute('src')).toBe(false)

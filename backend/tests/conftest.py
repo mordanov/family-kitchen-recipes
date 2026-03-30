@@ -11,7 +11,7 @@ if str(BACKEND_ROOT) not in sys.path:
 
 from app.auth import get_password_hash
 from app.database import Base
-from app.models import CookingMethod, Recipe, User, FamilyMember, DietModel, Gender
+from app.models import Recipe, User, FamilyMember, DietModel, Gender
 
 
 @pytest_asyncio.fixture
@@ -45,7 +45,6 @@ async def sample_recipe(session):
         title="Суп",
         ingredients="картофель\nморковь\nлук",
         shopping_list="картофель\nморковь\nлук",
-        cooking_method=CookingMethod.boiling,
         servings=4,
     )
     session.add(recipe)

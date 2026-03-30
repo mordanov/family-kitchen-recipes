@@ -90,7 +90,7 @@ class Recipe(Base):
         "RecipeCategory",
         secondary=recipe_categories_association,
         backref="recipes",
-        lazy="joined",
+        lazy="selectin",
     )
     ingredients = Column(Text, nullable=False, default="")
     recipe = Column(Text, nullable=True)

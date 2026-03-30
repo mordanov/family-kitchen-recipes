@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 
 from app.api.menus import add_menu_item, create_menu, get_shopping_list, auto_fill_menu, get_menu, list_menus
-from app.models import CookingMethod, Menu, MenuItem, MenuItemMember, MenuStatus, Recipe, StockItem, PreparedDish, AppSettings, FamilyMember, DietModel, Gender
+from app.models import Menu, MenuItem, MenuItemMember, MenuStatus, Recipe, StockItem, PreparedDish, AppSettings, FamilyMember, DietModel, Gender
 from app.schemas import MenuCreate, MenuItemCreate, AutoFillRequest
 
 
@@ -57,14 +57,12 @@ async def test_get_shopping_list_skips_cooked_items_and_deduplicates_recipe_titl
         title="Суп",
         ingredients="вода",
         shopping_list="картофель\nморковь",
-        cooking_method=CookingMethod.boiling,
         servings=4,
     )
     pie = Recipe(
         title="Пирог",
         ingredients="тесто",
         shopping_list="мука\nмасло",
-        cooking_method=CookingMethod.baking,
         servings=6,
     )
     session.add_all([menu, soup, pie])
@@ -100,7 +98,6 @@ async def test_get_shopping_list_splits_in_stock_and_to_buy_and_returns_prepared
         title="Суп",
         ingredients="вода",
         shopping_list="капуста 400 г\nморковь 2 шт",
-        cooking_method=CookingMethod.boiling,
         servings=4,
     )
     session.add_all([menu, soup, StockItem(name="капуста", quantity="1 кг")])
@@ -127,7 +124,6 @@ async def test_get_shopping_list_matches_synonyms_and_normalized_tokens(session)
         title="Овощной гарнир",
         ingredients="овощи",
         shopping_list="картошка 1 кг\nпомидоры 2 шт\nлук 1 шт",
-        cooking_method=CookingMethod.stewing,
         servings=3,
     )
     session.add_all(
@@ -159,7 +155,6 @@ async def test_get_shopping_list_matches_phrase_synonyms_and_descriptors(session
         title="Салат",
         ingredients="овощи",
         shopping_list="болгарский перец 2 шт\nсвежий чеснок 3 зубчика\nукроп 1 пучок",
-        cooking_method=CookingMethod.raw,
         servings=2,
     )
     session.add_all(
@@ -191,7 +186,6 @@ async def test_get_shopping_list_applies_custom_aliases_from_settings(session):
         title="Рататуй",
         ingredients="овощи",
         shopping_list="цуккини 2 шт\nчеснок 2 зубчика",
-        cooking_method=CookingMethod.stewing,
         servings=2,
     )
     session.add_all(
@@ -222,7 +216,6 @@ async def test_get_shopping_list_groups_to_buy_lines_with_synonyms(session):
         title="Овощное ассорти",
         ingredients="овощи",
         shopping_list="томаты 2 шт\nпомидоры 1 шт\nбаклажаны 2 шт",
-        cooking_method=CookingMethod.stewing,
         servings=2,
     )
     session.add_all([menu, recipe])
@@ -247,7 +240,6 @@ async def test_get_shopping_list_sums_same_product_amounts_to_single_line(sessio
         title="Драники и пюре",
         ingredients="картофель",
         shopping_list="картофель — 600 г\nкартофель — 300 г\nкартофель — 500 г\nкартофель — 700 г",
-        cooking_method=CookingMethod.frying,
         servings=4,
     )
     session.add_all([menu, recipe])
@@ -271,7 +263,6 @@ async def test_get_shopping_list_keeps_piece_units_for_in_stock_and_to_buy(sessi
         title="Омлет и салат",
         ingredients="яйца и овощи",
         shopping_list="яйца 2 шт.\nпомидоры 4 шт.\nогурцы 3 штуки",
-        cooking_method=CookingMethod.raw,
         servings=2,
     )
     session.add_all([
@@ -304,7 +295,6 @@ async def test_get_shopping_list_prefers_pieces_when_line_contains_piece_and_gra
         title="Лук для жарки",
         ingredients="лук",
         shopping_list="лук 1 шт (120 г)\nлук 2 шт (200 г)",
-        cooking_method=CookingMethod.frying,
         servings=2,
     )
     session.add_all([menu, recipe])
@@ -328,7 +318,6 @@ async def test_get_shopping_list_uses_stock_piece_quantity_for_in_stock_display(
         title="Суп луковый",
         ingredients="лук",
         shopping_list="лук 1500 г\nлук 1200 г",
-        cooking_method=CookingMethod.boiling,
         servings=4,
     )
     session.add_all([
@@ -356,7 +345,6 @@ async def test_get_shopping_list_preserves_multiword_ingredient_name(session):
         title="Курица с рисом",
         ingredients="куриное филе",
         shopping_list="куриное филе 600 г\nкуриное филе 400 г",
-        cooking_method=CookingMethod.stewing,
         servings=4,
     )
     session.add_all([menu, recipe])
@@ -381,7 +369,6 @@ async def test_get_shopping_list_scales_amounts_per_portion_with_round_up(sessio
         title="Рис с курицей",
         ingredients="рис\nкуриное филе",
         shopping_list="рис 1000 г\nкуриное филе 750 г",
-        cooking_method=CookingMethod.stewing,
         servings=6,
     )
     session.add_all([menu, recipe])
@@ -405,10 +392,10 @@ async def test_auto_fill_meal_slots_reuses_recipes_to_fill_all_days(session):
     menu = Menu(title="Авто меню", weeks=1, status=MenuStatus.active)
     session.add(menu)
     session.add_all([
-        Recipe(title="Рецепт 1", ingredients="a", shopping_list="a", cooking_method=CookingMethod.boiling, servings=2),
-        Recipe(title="Рецепт 2", ingredients="b", shopping_list="b", cooking_method=CookingMethod.boiling, servings=2),
-        Recipe(title="Рецепт 3", ingredients="c", shopping_list="c", cooking_method=CookingMethod.boiling, servings=2),
-        Recipe(title="Рецепт 4", ingredients="d", shopping_list="d", cooking_method=CookingMethod.boiling, servings=2),
+        Recipe(title="Рецепт 1", ingredients="a", shopping_list="a", servings=2),
+        Recipe(title="Рецепт 2", ingredients="b", shopping_list="b", servings=2),
+        Recipe(title="Рецепт 3", ingredients="c", shopping_list="c", servings=2),
+        Recipe(title="Рецепт 4", ingredients="d", shopping_list="d", servings=2),
     ])
     await session.commit()
     await session.refresh(menu)
@@ -437,8 +424,8 @@ async def test_auto_fill_meal_slots_with_members_reuses_recipes_when_unique_pool
         color="#4ECDC4",
     )
     recipes = [
-        Recipe(title="Сырники", ingredients="a", shopping_list="a", cooking_method=CookingMethod.frying, servings=2),
-        Recipe(title="Каша", ingredients="b", shopping_list="b", cooking_method=CookingMethod.boiling, servings=2),
+        Recipe(title="Сырники", ingredients="a", shopping_list="a", servings=2),
+        Recipe(title="Каша", ingredients="b", shopping_list="b", servings=2),
     ]
     session.add_all([menu, member, *recipes])
     await session.commit()
@@ -468,7 +455,6 @@ async def test_get_menu_includes_kbju_summary_total_and_by_day(session):
         title="Омлет",
         ingredients="a",
         shopping_list="a",
-        cooking_method=CookingMethod.frying,
         servings=2,
         calories=200,
         proteins=10,
@@ -480,7 +466,6 @@ async def test_get_menu_includes_kbju_summary_total_and_by_day(session):
         title="Суп",
         ingredients="b",
         shopping_list="b",
-        cooking_method=CookingMethod.boiling,
         servings=2,
         calories=300,
         proteins=20,
@@ -527,7 +512,6 @@ async def test_list_menus_includes_kbju_by_member_from_assignments(session):
         title="Сырники",
         ingredients="a",
         shopping_list="a",
-        cooking_method=CookingMethod.frying,
         servings=2,
         calories=420,
         proteins=18,

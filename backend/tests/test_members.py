@@ -12,7 +12,7 @@ from app.api.members import (
     add_disliked,
     remove_disliked,
 )
-from app.models import FamilyMember, Recipe, CookingMethod, Gender, DietModel
+from app.models import FamilyMember, Recipe, Gender, DietModel
 
 
 @pytest.mark.asyncio

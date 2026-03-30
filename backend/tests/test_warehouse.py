@@ -1,7 +1,7 @@
 import pytest
 
 from app.api.warehouse import create_prepared, update_prepared
-from app.models import CookingMethod, PreparedDish, Recipe
+from app.models import PreparedDish, Recipe
 from app.schemas import PreparedDishCreate, PreparedDishUpdate
 
 
@@ -11,14 +11,12 @@ async def test_update_prepared_allows_changing_recipe_and_date(session):
         title="Суп",
         ingredients="вода",
         shopping_list="картофель",
-        cooking_method=CookingMethod.boiling,
         servings=2,
     )
     r2 = Recipe(
         title="Рагу",
         ingredients="овощи",
         shopping_list="кабачок",
-        cooking_method=CookingMethod.stewing,
         servings=3,
     )
     session.add_all([r1, r2])
