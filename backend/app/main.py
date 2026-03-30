@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
-from app.api import auth, recipes, menus, settings as settings_router, warehouse, members
+from app.api import auth, recipes, menus, settings as settings_router, warehouse, members, directories
 from app.database import engine
 from app import models
 
@@ -23,6 +23,7 @@ app.include_router(menus.router, prefix="/api/menus", tags=["menus"])
 app.include_router(settings_router.router, prefix="/api/settings", tags=["settings"])
 app.include_router(warehouse.router, prefix="/api/warehouse", tags=["warehouse"])
 app.include_router(members.router, prefix="/api/members", tags=["members"])
+app.include_router(directories.router, prefix="/api/directories", tags=["directories"])
 
 # Static files for uploaded images
 os.makedirs("/app/uploads", exist_ok=True)

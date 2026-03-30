@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 import aiofiles
 
 from app.database import get_db
-from app.models import Recipe, CookingMethod, FamilyMember
+from app.models import Recipe, RecipeCategory, CookingMethodDirectory, FamilyMember
 from app.schemas import RecipeOut, RecipeMemberFeedbackOut, RecipeCreate
 from app.auth import get_current_user
 from app.services.kbju import calculate_kbju
@@ -107,6 +107,36 @@ def _validate_recipe_payload(payload: dict) -> RecipeCreate:
         raise HTTPException(status_code=422, detail=detail) from exc
 
 
+async def _resolve_categories(db: AsyncSession, category_ids: List[int]) -> List[RecipeCategory]:
+    if not category_ids:
+        raise HTTPException(status_code=422, detail="Нужно выбрать минимум одну категорию")
+    result = await db.execute(
+        select(RecipeCategory).where(
+            RecipeCategory.id.in_(category_ids),
+            RecipeCategory.is_deleted == False,
+        )
+    )
+    categories = result.scalars().all()
+    if not categories:
+        raise HTTPException(status_code=422, detail="Указанные категории не найдены")
+    return list(categories)
+
+
+async def _resolve_cooking_method(db: AsyncSession, method_id: Optional[int]) -> Optional[CookingMethodDirectory]:
+    if not method_id:
+        return None
+    result = await db.execute(
+        select(CookingMethodDirectory).where(
+            CookingMethodDirectory.id == method_id,
+            CookingMethodDirectory.is_deleted == False,
+        )
+    )
+    method = result.scalar_one_or_none()
+    if not method:
+        raise HTTPException(status_code=422, detail="Способ приготовления не найден")
+    return method
+
+
 async def run_kbju_calculation(recipe_id: int, db_url: str):
     """Background task to calculate KBJU after recipe save. Retries up to 3 times."""
     import asyncio
@@ -126,11 +156,12 @@ async def run_kbju_calculation(recipe_id: int, db_url: str):
                     logger.warning(f"Recipe {recipe_id} not found for KBJU calculation")
                     break
 
+                method_name = recipe.cooking_method.name if recipe.cooking_method else "другое"
                 kbju = await calculate_kbju(
                     title=recipe.title,
                     ingredients=recipe.ingredients,
                     servings=recipe.servings,
-                    cooking_method=recipe.cooking_method.value,
+                    cooking_method=method_name,
                     recipe_text=recipe.recipe,
                 )
                 if kbju:
@@ -173,11 +204,11 @@ async def list_recipes(
 async def create_recipe(
     background_tasks: BackgroundTasks,
     title: str = Form(...),
-    categories: List[str] = Form(...),
+    categories: List[int] = Form(...),
     ingredients: str = Form(default=""),
     recipe: str = Form(default=""),
     shopping_list: str = Form(default=""),
-    cooking_method: CookingMethod = Form(default=CookingMethod.boiling),
+    cooking_method: Optional[int] = Form(default=None),
     servings: int = Form(default=4),
     cooking_time_minutes: Optional[int] = Form(default=None),
     active_cooking_time_minutes: Optional[int] = Form(default=None),
@@ -188,6 +219,9 @@ async def create_recipe(
     db: AsyncSession = Depends(get_db),
     _=Depends(get_current_user),
 ):
+    category_objs = await _resolve_categories(db, categories)
+    method_obj = await _resolve_cooking_method(db, cooking_method)
+
     image_path = None
     additional_material_path = None
     additional_material_original_name = None
@@ -207,11 +241,9 @@ async def create_recipe(
     payload = _validate_recipe_payload(
         {
             "title": title,
-            "categories": categories,
             "ingredients": ingredients,
             "recipe": recipe,
             "shopping_list": shopping_list,
-            "cooking_method": cooking_method,
             "servings": servings,
             "cooking_time_minutes": cooking_time_minutes,
             "active_cooking_time_minutes": active_cooking_time_minutes,
@@ -220,13 +252,13 @@ async def create_recipe(
         }
     )
 
-    recipe = Recipe(
+    recipe_obj = Recipe(
         title=payload.title,
-        categories=payload.categories,
+        categories=category_objs,
         ingredients=payload.ingredients,
         recipe=payload.recipe if payload.recipe else None,
         shopping_list=payload.shopping_list,
-        cooking_method=payload.cooking_method,
+        cooking_method=method_obj,
         servings=payload.servings,
         cooking_time_minutes=payload.cooking_time_minutes,
         active_cooking_time_minutes=payload.active_cooking_time_minutes,
@@ -236,14 +268,14 @@ async def create_recipe(
         extra_info=payload.extra_info if payload.extra_info else None,
         image_path=image_path,
     )
-    db.add(recipe)
+    db.add(recipe_obj)
     await db.commit()
-    await db.refresh(recipe)
+    await db.refresh(recipe_obj)
 
     from app.config import settings
-    background_tasks.add_task(run_kbju_calculation, recipe.id, settings.DATABASE_URL)
+    background_tasks.add_task(run_kbju_calculation, recipe_obj.id, settings.DATABASE_URL)
 
-    return _build_recipe_out(recipe, {})
+    return _build_recipe_out(recipe_obj, {})
 
 
 @router.get("/{recipe_id}", response_model=RecipeOut)
@@ -261,11 +293,11 @@ async def update_recipe(
     recipe_id: int,
     background_tasks: BackgroundTasks,
     title: str = Form(...),
-    categories: List[str] = Form(...),
+    categories: List[int] = Form(...),
     ingredients: str = Form(default=""),
     recipe: str = Form(default=""),
     shopping_list: str = Form(default=""),
-    cooking_method: CookingMethod = Form(default=CookingMethod.boiling),
+    cooking_method: Optional[int] = Form(default=None),
     servings: int = Form(default=4),
     cooking_time_minutes: Optional[int] = Form(default=None),
     active_cooking_time_minutes: Optional[int] = Form(default=None),
@@ -281,8 +313,10 @@ async def update_recipe(
     if not db_recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
 
+    category_objs = await _resolve_categories(db, categories)
+    method_obj = await _resolve_cooking_method(db, cooking_method)
+
     if image and image.filename:
-        # Delete old image
         if db_recipe.image_path:
             old_path = "/app" + db_recipe.image_path
             if os.path.exists(old_path):
@@ -305,11 +339,9 @@ async def update_recipe(
     payload = _validate_recipe_payload(
         {
             "title": title,
-            "categories": categories,
             "ingredients": ingredients,
             "recipe": recipe,
             "shopping_list": shopping_list,
-            "cooking_method": cooking_method,
             "servings": servings,
             "cooking_time_minutes": cooking_time_minutes,
             "active_cooking_time_minutes": active_cooking_time_minutes,
@@ -319,11 +351,11 @@ async def update_recipe(
     )
 
     db_recipe.title = payload.title
-    db_recipe.categories = payload.categories
+    db_recipe.categories = category_objs
     db_recipe.ingredients = payload.ingredients
     db_recipe.recipe = payload.recipe if payload.recipe else None
     db_recipe.shopping_list = payload.shopping_list
-    db_recipe.cooking_method = payload.cooking_method
+    db_recipe.cooking_method = method_obj
     db_recipe.servings = payload.servings
     db_recipe.cooking_time_minutes = payload.cooking_time_minutes
     db_recipe.active_cooking_time_minutes = payload.active_cooking_time_minutes

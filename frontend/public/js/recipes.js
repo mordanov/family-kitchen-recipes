@@ -121,6 +121,8 @@ const RecipesPage = (() => {
   }
 
   function getRecipeEmoji(method) {
+    // method is now a CookingMethodOut object {id, name, emoji} or legacy string
+    if (method && typeof method === 'object') return method.emoji || '🍽️';
     const map = { boiling: '🍲', frying: '🍳', dry_frying: '🥘', stewing: '♨️', air_fryer: '🌀', baking: '🥧', raw: '🥗', other: '🍽️' };
     return map[method] || '🍽️';
   }
@@ -247,7 +249,7 @@ const RecipesPage = (() => {
     document.getElementById('save-recipe-btn-text').textContent = 'Обновить';
     document.getElementById('recipe-id').value = r.id;
     document.getElementById('recipe-title').value = r.title;
-    document.getElementById('recipe-method').value = r.cooking_method;
+    document.getElementById('recipe-method').value = r.cooking_method?.id ?? '';
     document.getElementById('recipe-servings').value = r.servings;
     document.getElementById('recipe-active-cooking-time').value = r.active_cooking_time_minutes ?? '';
     document.getElementById('recipe-cooking-time').value = r.cooking_time_minutes ?? '';
@@ -280,7 +282,7 @@ const RecipesPage = (() => {
     ['recipe-id', 'recipe-title', 'recipe-ingredients', 'recipe-instructions', 'recipe-shopping', 'recipe-extra', 'recipe-active-cooking-time', 'recipe-cooking-time'].forEach(id => {
       document.getElementById(id).value = '';
     });
-    document.getElementById('recipe-method').value = 'boiling';
+    // method select will default to first available option after loadDirectories
     document.getElementById('recipe-servings').value = 4;
     setFreezerFriendly(false);
     setSelectedCategories(['закуска']);
@@ -475,7 +477,8 @@ const RecipesPage = (() => {
     fd.append('ingredients', ingredients);
     fd.append('recipe', recipe);
     fd.append('shopping_list', shopping_list);
-    fd.append('cooking_method', document.getElementById('recipe-method').value);
+    const methodId = document.getElementById('recipe-method').value;
+    if (methodId) fd.append('cooking_method', methodId);
     fd.append('servings', document.getElementById('recipe-servings').value);
     const activeCookingTimeValue = document.getElementById('recipe-active-cooking-time').value.trim();
     if (activeCookingTimeValue) {
@@ -615,6 +618,7 @@ const RecipesPage = (() => {
     getAll,
     startKbjuPolling,
     stopKbjuPolling,
+    reloadDirectories: loadDirectories,
   };
 })();
 

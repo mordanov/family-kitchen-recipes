@@ -108,17 +108,15 @@ const App = (() => {
 
   // ── Helpers ──
   function cookingMethodLabel(m) {
+    if (!m) return '—';
+    if (typeof m === 'object') {
+      return [m.emoji, m.name].filter(Boolean).join(' ');
+    }
+    // Legacy fallback for old string values still in transit
     const map = {
-      boiling: '🫕 Варка',
-      frying: '🍳 Жарка',
-      dry_frying: '🥘 Жарка на сухой сковороде',
-      stewing: '♨️ Тушение',
-      air_fryer: '💨 Аэрогриль',
-      baking: '🔥 Запекание',
-      raw: '🥗 Сырое',
-      sous_vide: '♨️ Су-вид',
-      grill: '🍖 Гриль',
-      other: '🍽️ Разное',
+      boiling: '🫕 Варка', frying: '🍳 Жарка', dry_frying: '🥘 Жарка на сухой сковороде',
+      stewing: '♨️ Тушение', air_fryer: '💨 Аэрогриль', baking: '🔥 Запекание',
+      raw: '🥗 Сырое', sous_vide: '♨️ Су-вид', grill: '🍖 Гриль', other: '🍽️ Разное',
     };
     return map[m] || m;
   }

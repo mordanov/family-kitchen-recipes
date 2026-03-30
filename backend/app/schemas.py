@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, List, Dict, Literal
 from datetime import datetime, date
-from app.models import CookingMethod, MenuStatus, Gender, DietModel, ALLOWED_RECIPE_CATEGORIES
+from app.models import MenuStatus, Gender, DietModel
 
 
 # Auth
@@ -16,14 +16,52 @@ class LoginRequest(BaseModel):
     password: str
 
 
-# Recipe
+# ── Directories ────────────────────────────────────────────────────────────────
+
+class RecipeCategoryOut(BaseModel):
+    id: int
+    name: str
+    is_deleted: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class RecipeCategoryCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+
+
+class RecipeCategoryUpdate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+
+
+class CookingMethodOut(BaseModel):
+    id: int
+    name: str
+    emoji: Optional[str] = None
+    is_deleted: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class CookingMethodCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    emoji: Optional[str] = Field(None, max_length=10)
+
+
+class CookingMethodUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    emoji: Optional[str] = Field(None, max_length=10)
+
+
+# ── Recipe ─────────────────────────────────────────────────────────────────────
+
 class RecipeBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
-    categories: List[str] = Field(default_factory=list)
     ingredients: str = Field(..., min_length=1)
     recipe: Optional[str] = None
     shopping_list: str = ""
-    cooking_method: CookingMethod = CookingMethod.boiling
     servings: int = Field(default=4, ge=1, le=50)
     cooking_time_minutes: Optional[int] = Field(default=None, ge=1, le=1440)
     active_cooking_time_minutes: Optional[int] = Field(default=None, ge=1, le=1440)
@@ -31,21 +69,6 @@ class RecipeBase(BaseModel):
     additional_material_path: Optional[str] = None
     additional_material_original_name: Optional[str] = None
     extra_info: Optional[str] = None
-
-    @field_validator("categories")
-    @classmethod
-    def validate_categories(cls, value: List[str]) -> List[str]:
-        cleaned = [item.strip() for item in value if item and item.strip()]
-        if not cleaned:
-            raise ValueError("Нужно выбрать минимум одну категорию")
-
-        allowed = set(ALLOWED_RECIPE_CATEGORIES)
-        invalid = [item for item in cleaned if item not in allowed]
-        if invalid:
-            raise ValueError(f"Недопустимые категории: {', '.join(invalid)}")
-
-        # Keep order, remove duplicates.
-        return list(dict.fromkeys(cleaned))
 
     @model_validator(mode="after")
     def validate_cooking_times(self):
@@ -73,8 +96,22 @@ class RecipeMemberFeedbackOut(BaseModel):
     status: Literal["preferred", "disliked"]
 
 
-class RecipeOut(RecipeBase):
+class RecipeOut(BaseModel):
     id: int
+    title: str
+    categories: List[str] = []
+    ingredients: str
+    recipe: Optional[str] = None
+    shopping_list: str = ""
+    cooking_method: Optional[CookingMethodOut] = None
+    cooking_method_id: Optional[int] = None
+    servings: int
+    cooking_time_minutes: Optional[int] = None
+    active_cooking_time_minutes: Optional[int] = None
+    freezer_friendly: bool = False
+    additional_material_path: Optional[str] = None
+    additional_material_original_name: Optional[str] = None
+    extra_info: Optional[str] = None
     image_path: Optional[str] = None
     calories: Optional[float] = None
     proteins: Optional[float] = None
@@ -84,6 +121,13 @@ class RecipeOut(RecipeBase):
     member_feedback: List[RecipeMemberFeedbackOut] = []
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("categories", mode="before")
+    @classmethod
+    def extract_category_names(cls, v):
+        if isinstance(v, list):
+            return [item.name if hasattr(item, "name") else str(item) for item in v]
+        return v
 
     class Config:
         from_attributes = True
@@ -301,4 +345,3 @@ class FamilyMemberOut(BaseModel):
 
     class Config:
         from_attributes = True
-

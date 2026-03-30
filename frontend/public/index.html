@@ -760,6 +760,32 @@ select.form-control[multiple] {
 .warehouse-action-btn {
   white-space: nowrap;
 }
+/* Directory rows (settings page) */
+.directory-row {
+  border: 2px solid var(--c-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  background: var(--c-surface);
+}
+.directory-row-view {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.directory-row-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+.directory-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.directory-row-edit {
+  gap: 8px;
+}
 .warehouse-delete-btn {
   border-color: #ffc9cf;
   color: var(--c-danger);
@@ -1089,16 +1115,7 @@ select.form-control[multiple] {
         <div class="form-group">
           <label class="form-label">Способ приготовления</label>
           <select class="form-control" id="recipe-method">
-            <option value="boiling">🫕 Варка</option>
-            <option value="frying">🍳 Жарка</option>
-            <option value="dry_frying">🥘 Жарка на сухой сковороде</option>
-            <option value="stewing">♨️ Тушение</option>
-            <option value="air_fryer">💨 Аэрогриль</option>
-            <option value="baking">🔥 Запекание</option>
-            <option value="raw">🥗 Сырое</option>
-            <option value="sous_vide">🥄 Су-вид</option>
-            <option value="grill">🍖 Гриль</option>
-            <option value="other">🍽️ Разное</option>
+            <option value="">— загрузка... —</option>
           </select>
         </div>
         <div class="form-group">
