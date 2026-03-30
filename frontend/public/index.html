@@ -1442,6 +1442,28 @@ select.form-control[multiple] {
   </div>
 </div>
 
+<!-- Modal: Recipe Categories -->
+<div class="modal-backdrop" id="modal-categories">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Категории блюд</h2>
+      <button class="modal-close" onclick="SettingsPage.closeDirectoryModal('categories')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-categories-body"></div>
+  </div>
+</div>
+
+<!-- Modal: Cooking Methods -->
+<div class="modal-backdrop" id="modal-methods">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Способы приготовления</h2>
+      <button class="modal-close" onclick="SettingsPage.closeDirectoryModal('methods')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-methods-body"></div>
+  </div>
+</div>
+
 <script src="/js/api.js"></script>
 <script src="/js/app.js"></script>
 <script src="/js/recipes.js"></script>

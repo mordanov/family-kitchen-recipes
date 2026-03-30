@@ -56,19 +56,10 @@ const SettingsPage = (() => {
         <div class="shopping-list-block" style="max-width:900px">
 
           <h3 style="margin-bottom:12px">Категории блюд</h3>
-          <div id="categories-list"></div>
-          <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
-            <input class="form-control" id="new-category-name" maxlength="100" placeholder="Название категории" style="flex:1"/>
-            <button class="btn btn-primary" onclick="SettingsPage.addCategory()">+ Добавить</button>
-          </div>
+          <button class="btn btn-secondary" onclick="SettingsPage.openDirectoryModal('categories')">✏️ Редактировать категории</button>
 
           <h3 style="margin:32px 0 12px">Способы приготовления</h3>
-          <div id="methods-list"></div>
-          <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
-            <input class="form-control" id="new-method-emoji" maxlength="10" placeholder="Emoji" style="width:72px;flex-shrink:0"/>
-            <input class="form-control" id="new-method-name" maxlength="100" placeholder="Название" style="flex:1"/>
-            <button class="btn btn-primary" onclick="SettingsPage.addMethod()">+ Добавить</button>
-          </div>
+          <button class="btn btn-secondary" onclick="SettingsPage.openDirectoryModal('methods')">✏️ Редактировать способы приготовления</button>
 
           <h3 style="margin:32px 0 12px">Синонимы продуктов</h3>
           <p class="text-muted" style="margin-bottom:10px">Формат: <code>алиас=канон</code>. Один алиас на строку.</p>
@@ -92,25 +83,44 @@ const SettingsPage = (() => {
         </div>
       `;
 
-      renderCategories(categoriesRes);
-      renderMethods(methodsRes);
+      renderCategoriesModal(categoriesRes);
+      renderMethodsModal(methodsRes);
 
     } catch (e) {
       content.innerHTML = `<p style="color:var(--c-danger)">Ошибка загрузки настроек: ${e.message}</p>`;
     }
   }
 
+  // ── Modal open / close ───────────────────────────────────────────────────────
+
+  function openDirectoryModal(type) {
+    document.getElementById(`modal-${type}`).classList.add('open');
+  }
+
+  function closeDirectoryModal(type) {
+    document.getElementById(`modal-${type}`).classList.remove('open');
+  }
+
   // ── Categories ───────────────────────────────────────────────────────────────
 
-  function renderCategories(categories) {
-    const list = document.getElementById('categories-list');
-    if (!list) return;
-    if (!categories.length) {
-      list.innerHTML = '<p class="text-muted">Категорий пока нет</p>';
-      return;
-    }
-    list.innerHTML = categories.map(c => categoryRowHtml(c)).join('');
-    bindDirectoryRowEvents(list, 'category');
+  function renderCategoriesModal(categories) {
+    const body = document.getElementById('modal-categories-body');
+    if (!body) return;
+
+    const listHtml = categories.length
+      ? categories.map(c => categoryRowHtml(c)).join('')
+      : '<p class="text-muted">Категорий пока нет</p>';
+
+    body.innerHTML = `
+      <div id="categories-list">${listHtml}</div>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+        <input class="form-control" id="new-category-name" maxlength="100" placeholder="Название категории" style="flex:1"/>
+        <button class="btn btn-primary" onclick="SettingsPage.addCategory()">+ Добавить</button>
+      </div>
+    `;
+
+    const list = body.querySelector('#categories-list');
+    if (list && categories.length) bindDirectoryRowEvents(list, 'category');
   }
 
   function categoryRowHtml(c) {
@@ -168,15 +178,25 @@ const SettingsPage = (() => {
 
   // ── Cooking Methods ──────────────────────────────────────────────────────────
 
-  function renderMethods(methods) {
-    const list = document.getElementById('methods-list');
-    if (!list) return;
-    if (!methods.length) {
-      list.innerHTML = '<p class="text-muted">Способов приготовления пока нет</p>';
-      return;
-    }
-    list.innerHTML = methods.map(m => methodRowHtml(m)).join('');
-    bindDirectoryRowEvents(list, 'method');
+  function renderMethodsModal(methods) {
+    const body = document.getElementById('modal-methods-body');
+    if (!body) return;
+
+    const listHtml = methods.length
+      ? methods.map(m => methodRowHtml(m)).join('')
+      : '<p class="text-muted">Способов приготовления пока нет</p>';
+
+    body.innerHTML = `
+      <div id="methods-list">${listHtml}</div>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+        <input class="form-control" id="new-method-emoji" maxlength="10" placeholder="Emoji" style="width:72px;flex-shrink:0"/>
+        <input class="form-control" id="new-method-name" maxlength="100" placeholder="Название" style="flex:1"/>
+        <button class="btn btn-primary" onclick="SettingsPage.addMethod()">+ Добавить</button>
+      </div>
+    `;
+
+    const list = body.querySelector('#methods-list');
+    if (list && methods.length) bindDirectoryRowEvents(list, 'method');
   }
 
   function methodRowHtml(m) {
@@ -254,7 +274,6 @@ const SettingsPage = (() => {
 
     root.querySelectorAll('.js-dir-cancel').forEach(btn => {
       btn.addEventListener('click', () => {
-        // Find the closest directory-row ancestor
         const row = btn.closest('.directory-row');
         if (!row) return;
         row.querySelector('.directory-row-view').style.display = '';
@@ -292,8 +311,8 @@ const SettingsPage = (() => {
       API.getRecipeCategories(),
       API.getCookingMethods(),
     ]);
-    renderCategories(categoriesRes);
-    renderMethods(methodsRes);
+    renderCategoriesModal(categoriesRes);
+    renderMethodsModal(methodsRes);
     // Also refresh the recipe form pickers if they're loaded
     if (typeof RecipesPage !== 'undefined') {
       RecipesPage.reloadDirectories?.();
@@ -323,5 +342,5 @@ const SettingsPage = (() => {
     App.toast(checked ? 'Подтверждение быстрых действий отключено' : 'Подтверждение быстрых действий включено', 'success');
   }
 
-  return { load, saveSynonyms, toggleQuickConfirmSkip, addCategory, addMethod };
+  return { load, saveSynonyms, toggleQuickConfirmSkip, addCategory, addMethod, openDirectoryModal, closeDirectoryModal };
 })();
