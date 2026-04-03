@@ -11,3 +11,4 @@ uploads/
 postgres_data/
 .DS_Store
 *.tar.gz
+frontend/package-lock.json
