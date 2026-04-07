@@ -309,6 +309,24 @@ class PreparedDishOut(BaseModel):
         from_attributes = True
 
 
+# ─── Receipt processing ───
+
+class ReceiptProductResult(BaseModel):
+    """Single product extracted from a receipt."""
+    original_name: str
+    normalized_name: str
+    quantity: str
+    unresolved: bool  # True if no synonym was found – added to the unresolved list
+
+
+class ReceiptProcessResult(BaseModel):
+    """Result returned by POST /api/warehouse/receipt."""
+    ocr_text: str
+    products_found: int
+    products_added: List[ReceiptProductResult]
+    unresolved_synonyms: List[str]  # product names newly added to the unresolved list
+
+
 # ─── Family Members ───
 
 class FamilyMemberCreate(BaseModel):

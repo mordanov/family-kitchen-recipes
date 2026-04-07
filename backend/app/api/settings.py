@@ -13,6 +13,7 @@ router = APIRouter()
 
 PRODUCT_SYNONYMS_KEY = "warehouse_product_synonyms"
 PHRASE_SYNONYMS_KEY = "warehouse_phrase_synonyms"
+UNRESOLVED_KEY = "warehouse_unresolved_synonyms"
 
 
 def _load_aliases(raw: str | None) -> dict[str, str]:
@@ -89,3 +90,16 @@ async def set_phrase_synonyms(
         db.add(AppSettings(key=PHRASE_SYNONYMS_KEY, value=value))
     await db.commit()
     return {"aliases": data.aliases}
+
+
+@router.get("/warehouse/unresolved-synonyms")
+async def get_unresolved_synonyms(db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
+    """Return product names that were seen during receipt processing but have no synonym yet."""
+    setting = await _get_setting(db, UNRESOLVED_KEY)
+    if not setting or not setting.value:
+        return {"items": []}
+    try:
+        data = json.loads(setting.value)
+    except json.JSONDecodeError:
+        return {"items": []}
+    return {"items": [str(x) for x in data if isinstance(x, str)]}

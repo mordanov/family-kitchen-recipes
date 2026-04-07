@@ -1,18 +1,202 @@
+import json
+import logging
+from datetime import date
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.models import StockItem, PreparedDish
+from app.models import AppSettings, StockItem, PreparedDish
 from app.schemas import (
     StockItemCreate, StockItemUpdate, StockItemOut,
     PreparedDishCreate, PreparedDishUpdate, PreparedDishOut,
+    ReceiptProcessResult, ReceiptProductResult,
 )
 from app.auth import get_current_user
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+# ── AppSettings keys ─────────────────────────────────────────────────────────
+
+_PRODUCT_SYNONYMS_KEY = "warehouse_product_synonyms"
+_PHRASE_SYNONYMS_KEY = "warehouse_phrase_synonyms"
+_UNRESOLVED_KEY = "warehouse_unresolved_synonyms"
+
+_MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+async def _get_setting_value(db: AsyncSession, key: str) -> str | None:
+    result = await db.execute(select(AppSettings).where(AppSettings.key == key))
+    row = result.scalar_one_or_none()
+    return row.value if row else None
+
+
+async def _set_setting_value(db: AsyncSession, key: str, value: str) -> None:
+    result = await db.execute(select(AppSettings).where(AppSettings.key == key))
+    row = result.scalar_one_or_none()
+    if row:
+        row.value = value
+    else:
+        db.add(AppSettings(key=key, value=value))
+
+
+def _load_synonyms(raw: str | None) -> dict[str, str]:
+    """Return key→value synonym map (both already lower-cased strings)."""
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    result: dict[str, str] = {}
+    for k, v in (data.items() if isinstance(data, dict) else []):
+        if isinstance(k, str) and isinstance(v, str):
+            result[k.strip().lower()] = v.strip().lower()
+    return result
+
+
+def _load_unresolved(raw: str | None) -> list[str]:
+    if not raw:
+        return []
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return []
+    return [str(x) for x in data if isinstance(x, str)]
+
+
+def _apply_synonyms(
+    name: str,
+    product_synonyms: dict[str, str],
+    phrase_synonyms: dict[str, str],
+) -> tuple[str, bool]:
+    """
+    Normalize *name* using the synonym dictionaries.
+    Phrase synonyms are checked first (longest match wins), then single-word synonyms.
+
+    Returns (normalized_name, is_unresolved).
+    is_unresolved=True means the name was not found in any synonym entry.
+    """
+    name_lower = name.strip().lower()
+
+    # 1. Phrase synonyms (sorted longest-first to prefer more-specific matches)
+    for phrase in sorted(phrase_synonyms, key=len, reverse=True):
+        if phrase in name_lower:
+            return phrase_synonyms[phrase], False
+
+    # 2. Exact product synonym
+    if name_lower in product_synonyms:
+        return product_synonyms[name_lower], False
+
+    # 3. Not found – caller should mark as unresolved
+    return name_lower, True
+
+
+# ── Receipt Processing ───────────────────────────────────────────────────────
+
+@router.post("/receipt", response_model=ReceiptProcessResult)
+async def process_receipt(
+    image: UploadFile = File(..., description="Photo of a store receipt (JPEG, PNG, WEBP – max 10 MB)"),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    """
+    Upload a store-receipt image.
+
+    Pipeline:
+      1. OCR via Tesseract (pytesseract) → raw text
+      2. OpenAI gpt-4o-mini → structured product list, translated to Russian
+      3. Synonym lookup → normalise product names
+         • If a product name has no synonym entry → register it as *unresolved*
+           in the `warehouse_unresolved_synonyms` settings key.
+      4. Persist every product as a StockItem (warehouse).
+
+    Protected by standard JWT Bearer auth – include the Authorization header.
+    """
+    # ── 1. Read & validate upload ─────────────────────────────────────────────
+    raw_bytes = await image.read()
+    if len(raw_bytes) > _MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="Image too large (max 10 MB).")
+
+    content_type = (image.content_type or "").lower()
+    if content_type and not any(t in content_type for t in ("image/", "application/octet-stream")):
+        raise HTTPException(status_code=415, detail="Only image files are accepted.")
+
+    # ── 2. OCR ────────────────────────────────────────────────────────────────
+    from app.services.receipt_parser import ocr_image, parse_products_with_openai
+    try:
+        ocr_text = ocr_image(raw_bytes)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+    # ── 3. OpenAI parsing + translation ──────────────────────────────────────
+    try:
+        products = await parse_products_with_openai(ocr_text)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except Exception as exc:
+        logger.error(f"OpenAI receipt parsing error: {exc}")
+        raise HTTPException(status_code=502, detail="Could not parse receipt via OpenAI.")
+
+    if not products:
+        return ReceiptProcessResult(
+            ocr_text=ocr_text,
+            products_found=0,
+            products_added=[],
+            unresolved_synonyms=[],
+        )
+
+    # ── 4. Load synonym dictionaries ──────────────────────────────────────────
+    product_synonyms = _load_synonyms(await _get_setting_value(db, _PRODUCT_SYNONYMS_KEY))
+    phrase_synonyms = _load_synonyms(await _get_setting_value(db, _PHRASE_SYNONYMS_KEY))
+    unresolved: list[str] = _load_unresolved(await _get_setting_value(db, _UNRESOLVED_KEY))
+    newly_unresolved: list[str] = []
+
+    # ── 5. Process each product ───────────────────────────────────────────────
+    today = date.today()
+    added_products: list[ReceiptProductResult] = []
+
+    for product in products:
+        original_name = product["name"]
+        quantity = product["quantity"]
+
+        normalized, is_unresolved = _apply_synonyms(original_name, product_synonyms, phrase_synonyms)
+
+        if is_unresolved and normalized not in unresolved:
+            unresolved.append(normalized)
+            newly_unresolved.append(normalized)
+
+        stock_item = StockItem(name=normalized, quantity=quantity, added_on=today)
+        db.add(stock_item)
+
+        added_products.append(ReceiptProductResult(
+            original_name=original_name,
+            normalized_name=normalized,
+            quantity=quantity,
+            unresolved=is_unresolved,
+        ))
+
+    # ── 6. Persist unresolved list & stock items ──────────────────────────────
+    if newly_unresolved:
+        await _set_setting_value(db, _UNRESOLVED_KEY, json.dumps(unresolved, ensure_ascii=False))
+
+    await db.commit()
+
+    return ReceiptProcessResult(
+        ocr_text=ocr_text,
+        products_found=len(products),
+        products_added=added_products,
+        unresolved_synonyms=newly_unresolved,
+    )
 
 
 # ── Stock Items (В наличии) ──────────────────────────────────────────────────
