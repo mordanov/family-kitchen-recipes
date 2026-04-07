@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     USER1_PASSWORD: str = "password1"
     USER2_NAME: str = "user2"
     USER2_PASSWORD: str = "password2"
+    SERVICE_USER_NAME: str = "kitchen_service"
+    SERVICE_USER_PASSWORD: str = "service_password"
 
     class Config:
         env_file = ".env"

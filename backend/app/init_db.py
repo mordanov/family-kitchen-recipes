@@ -77,6 +77,7 @@ async def init_db():
         for username, password in [
             (settings.USER1_NAME, settings.USER1_PASSWORD),
             (settings.USER2_NAME, settings.USER2_PASSWORD),
+            (settings.SERVICE_USER_NAME, settings.SERVICE_USER_PASSWORD),
         ]:
             result = await session.execute(select(User).where(User.username == username))
             existing = result.scalar_one_or_none()
