@@ -375,19 +375,19 @@ const WarehousePage = (() => {
   }
 
   async function commitDraft(draftId, triggerBtn) {
-    const card = triggerBtn.closest('.draft-card');
-    const rows = card.querySelectorAll('.draft-item-row');
-    const items = [];
-    rows.forEach(row => {
-      const name = row.querySelector('.draft-item-name').value.trim();
-      const quantity = row.querySelector('.draft-item-qty').value.trim();
-      if (name) items.push({ name, quantity });
-    });
-    if (!items.length) {
-      App.toast('Нет позиций для добавления на склад', 'error');
-      return;
-    }
     try {
+      const card = triggerBtn.closest('.draft-card');
+      const rows = card ? card.querySelectorAll('.draft-item-row') : [];
+      const items = [];
+      rows.forEach(row => {
+        const name = (row.querySelector('.draft-item-name') || {}).value || '';
+        const quantity = (row.querySelector('.draft-item-qty') || {}).value || '';
+        if (name.trim()) items.push({ name: name.trim(), quantity: quantity.trim() });
+      });
+      if (!items.length) {
+        App.toast('Нет позиций для добавления на склад', 'error');
+        return;
+      }
       const res = await API.commitDraft(draftId, { items });
       App.toast(`Добавлено на склад: ${res.items_added} поз.`, 'success');
       await load();
