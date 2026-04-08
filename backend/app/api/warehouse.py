@@ -111,12 +111,12 @@ async def process_receipt(
     Upload a store-receipt image.
 
     Pipeline:
-      1. OCR via Tesseract (pytesseract) → raw text
-      2. OpenAI gpt-4o-mini → structured product list, translated to Russian
-      3. Synonym lookup → normalise product names
+      1. OpenAI gpt-4o-mini vision API → transcribes image + extracts structured
+         product list (handles rotation, any language, barcodes automatically)
+      2. Synonym lookup → normalise product names
          • If a product name has no synonym entry → register it as *unresolved*
            in the `warehouse_unresolved_synonyms` settings key.
-      4. Save products as a ReceiptDraft (not directly to warehouse).
+      3. Save products as a ReceiptDraft (not directly to warehouse).
          The draft must be reviewed and committed via POST /drafts/{id}/commit.
 
     Protected by standard JWT Bearer auth – include the Authorization header.
@@ -130,23 +130,16 @@ async def process_receipt(
     if content_type and not any(t in content_type for t in ("image/", "application/octet-stream")):
         raise HTTPException(status_code=415, detail="Only image files are accepted.")
 
-    # ── 2. OCR ────────────────────────────────────────────────────────────────
-    from app.services.receipt_parser import ocr_image, parse_products_with_openai
+    # ── 2. Vision API: read image and extract products in one step ────────────
+    from app.services.receipt_parser import parse_receipt_with_vision
+    content_type = (image.content_type or "image/jpeg").lower()
     try:
-        ocr_text = ocr_image(raw_bytes)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
-
-    # ── 3. OpenAI parsing + translation ──────────────────────────────────────
-    try:
-        products = await parse_products_with_openai(ocr_text)
+        ocr_text, products = await parse_receipt_with_vision(raw_bytes, content_type)
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
     except Exception as exc:
-        logger.error(f"OpenAI receipt parsing error: {exc}")
-        raise HTTPException(status_code=502, detail="Could not parse receipt via OpenAI.")
+        logger.error(f"Vision receipt parsing error: {exc}")
+        raise HTTPException(status_code=502, detail="Could not parse receipt via vision API.")
 
     if not products:
         draft = ReceiptDraft(ocr_text=ocr_text, items=[])

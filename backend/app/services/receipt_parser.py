@@ -1,113 +1,47 @@
-import io
+import base64
 import json
 import logging
 import re
-
-from PIL import Image, ImageEnhance
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 
-def _auto_rotate(img: Image.Image, pytesseract) -> Image.Image:
+async def parse_receipt_with_vision(
+    image_bytes: bytes,
+    content_type: str = "image/jpeg",
+) -> tuple[str, list[dict]]:
     """
-    Use Tesseract OSD to detect the image orientation and rotate it upright.
-    Receipts are often photographed sideways (90° or 270°).
-    """
-    try:
-        osd = pytesseract.image_to_osd(img, config="--psm 0 --dpi 150", nice=0)
-        match = re.search(r"Rotate:\s*(\d+)", osd)
-        if match:
-            angle = int(match.group(1))
-            if angle:
-                img = img.rotate(-angle, expand=True)
-                logger.info(f"OCR: auto-rotated image by {angle}°")
-    except Exception as exc:
-        # OSD can fail on low-quality images or when there is not enough text;
-        # continue without rotation rather than aborting the whole pipeline.
-        logger.debug(f"OSD rotation detection skipped: {exc}")
-    return img
+    Send a receipt photo directly to the OpenAI vision API (gpt-4o-mini).
 
-
-def _preprocess(img: Image.Image, pytesseract) -> Image.Image:
-    """Convert to grayscale, auto-rotate, and boost contrast."""
-    gray = img.convert("L")
-    gray = _auto_rotate(gray, pytesseract)
-    # Boost contrast so faint thermal-paper text becomes crisper
-    gray = ImageEnhance.Contrast(gray).enhance(2.0)
-    return gray
-
-
-def ocr_image(image_bytes: bytes) -> str:
-    """
-    Extract raw text from a receipt image using pytesseract (Tesseract OCR).
-
-    Pre-processing steps applied before OCR:
-      1. Grayscale conversion
-      2. Auto-rotation via Tesseract OSD (fixes sideways/upside-down photos)
-      3. Contrast enhancement (helps with faint thermal-paper receipts)
-
-    OCR options:
-      --psm 4  – single column of variable-size text (better for receipt columns
-                 than psm 6 which assumes a uniform block)
-      --oem 3  – LSTM neural-network engine (most accurate)
-      --dpi 150 – explicit DPI so Tesseract doesn't underestimate character size
-    """
-    try:
-        import pytesseract
-    except ImportError:
-        raise RuntimeError(
-            "pytesseract is not installed. Add it to requirements.txt and rebuild the Docker image."
-        )
-
-    img = Image.open(io.BytesIO(image_bytes))
-    img = _preprocess(img, pytesseract)
-
-    ocr_config = "--psm 4 --oem 3 --dpi 150"
-    try:
-        text = pytesseract.image_to_string(img, lang="rus+eng", config=ocr_config)
-    except pytesseract.TesseractError:
-        logger.warning("rus+eng lang pack unavailable, falling back to default OCR")
-        text = pytesseract.image_to_string(img, config=ocr_config)
-
-    result = text.strip()
-    if not result:
-        raise ValueError("OCR returned empty text – the image may be unreadable or blank.")
-    logger.info(f"OCR result (first 400 chars): {result[:400]}")
-    return result
-
-
-async def parse_products_with_openai(ocr_text: str) -> list[dict]:
-    """
-    Send OCR text to OpenAI gpt-4o-mini to:
-      - identify product line items
-      - translate names to Russian
-      - normalize names (drop codes/prices/noise)
-      - extract quantities
-
-    Returns a list of {"name": str, "quantity": str} dicts.
+    Returns (transcript, products) where:
+      - transcript: human-readable text extracted from the receipt (for display / debug)
+      - products:   list of {"name": str, "quantity": str} dicts, names in Russian lowercase
     """
     if not settings.OPENAI_API_KEY:
         raise RuntimeError("OpenAI API key is not configured – cannot parse receipt.")
 
+    mime = content_type if content_type.startswith("image/") else "image/jpeg"
+    img_b64 = base64.b64encode(image_bytes).decode()
+
     prompt = (
-        "Ты помощник по распознаванию кассовых чеков.\n\n"
-        "Тебе дан текст, полученный с помощью OCR из фотографии чека из магазина.\n"
-        "Твоя задача:\n"
-        "1. Извлечь все товарные позиции (продукты питания и бытовые товары).\n"
-        "2. Перевести названия на русский язык, если они не на русском.\n"
-        "3. Нормализовать: убрать артикулы, штрих-коды, цены, скидки — оставить\n"
-        "   только понятное человеку название продукта в нижнем регистре.\n"
-        "4. Указать количество/объём в удобочитаемом виде: «1 кг», «500 г», «2 шт», «1 л» и т.п.\n"
-        "   Если явно не указано — написать «1 шт».\n\n"
-        "Игнорируй: суммы, налоги, скидки на чек, название магазина, дату, кассира, номер чека.\n\n"
-        "Важно: OCR-текст может быть неидеальным — могут быть лишние символы или опечатки. "
-        "Постарайся интерпретировать максимально разумно.\n\n"
-        f"OCR текст:\n{ocr_text}\n\n"
-        "Ответь ТОЛЬКО валидным JSON-массивом без пояснений и без markdown:\n"
-        '[{"name": "название продукта", "quantity": "количество"}, ...]\n'
-        "Если товаров не найдено — верни пустой массив: []"
+        "This is a photo of a store receipt. It may be rotated or skewed — that's fine, "
+        "please read it regardless of orientation.\n\n"
+        "Do TWO things and return a single JSON object (no markdown, no explanation):\n\n"
+        "1. Transcribe all readable text from the receipt into the \"text\" field.\n"
+        "2. Extract every product line item into the \"items\" array:\n"
+        "   - Translate product names to Russian, lowercase\n"
+        "   - Remove prices, item codes, barcodes, discounts from the name\n"
+        "   - Quantity format: «1 шт», «500 г», «1 кг», «1 л», «2 шт» etc.\n"
+        "     If the receipt shows a count prefix like \"4 QUESO\", use quantity «4 шт»\n"
+        "     If the receipt shows weight × price/kg, compute quantity as «X кг»\n"
+        "   - If quantity not shown, use «1 шт»\n"
+        "   - Ignore: totals, taxes, cashier, store name, receipt number, parking\n\n"
+        "Required output format (ONLY this JSON, nothing else):\n"
+        '{"text": "<full receipt transcription>", '
+        '"items": [{"name": "<russian lowercase name>", "quantity": "<qty>"}, ...]}\n\n'
+        "If no products are found: {\"text\": \"...\", \"items\": []}"
     )
 
     from openai import AsyncOpenAI
@@ -115,30 +49,48 @@ async def parse_products_with_openai(ocr_text: str) -> list[dict]:
 
     response = await client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=1500,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{mime};base64,{img_b64}",
+                            "detail": "high",
+                        },
+                    },
+                    {"type": "text", "text": prompt},
+                ],
+            }
+        ],
+        max_tokens=2000,
         temperature=0.1,
     )
-    content = response.choices[0].message.content.strip()
-    logger.info(f"OpenAI receipt parse (first 300 chars): {content[:300]}")
 
-    # Strip markdown code fences if present
+    content = response.choices[0].message.content.strip()
+    logger.info(f"Vision receipt response (first 400 chars): {content[:400]}")
+
+    # Strip markdown code fences if the model added them anyway
     content = re.sub(r"```(?:json)?\s*", "", content).strip()
 
-    start = content.find("[")
-    end = content.rfind("]")
-    if start == -1 or end == -1 or end <= start:
-        logger.warning(f"No JSON array found in OpenAI response: {content}")
-        return []
+    start = content.find("{")
+    end = content.rfind("}")
+    if start == -1 or end == -1:
+        logger.warning(f"No JSON object in vision response: {content}")
+        return (content, [])
 
     try:
         data = json.loads(content[start : end + 1])
     except json.JSONDecodeError as exc:
-        logger.warning(f"JSON decode error in OpenAI response: {exc} | content: {content}")
-        return []
+        logger.warning(f"JSON decode error in vision response: {exc} | raw: {content}")
+        return (content, [])
+
+    transcript = str(data.get("text", "")).strip()
+    items_raw = data.get("items", [])
 
     products: list[dict] = []
-    for item in data:
+    for item in items_raw:
         if not isinstance(item, dict):
             continue
         name = str(item.get("name", "")).strip().lower()
@@ -146,4 +98,5 @@ async def parse_products_with_openai(ocr_text: str) -> list[dict]:
         if name:
             products.append({"name": name, "quantity": quantity})
 
-    return products
+    logger.info(f"Vision extracted {len(products)} products")
+    return (transcript, products)
