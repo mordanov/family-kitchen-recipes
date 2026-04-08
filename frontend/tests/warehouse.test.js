@@ -28,6 +28,7 @@ describe('WarehousePage', () => {
       listStock: vi.fn(),
       listPrepared: vi.fn(),
       listRecipes: vi.fn(),
+      listDrafts: vi.fn().mockResolvedValue([]),
       updateStock: vi.fn(),
       createStock: vi.fn(),
       deleteStock: vi.fn(),
