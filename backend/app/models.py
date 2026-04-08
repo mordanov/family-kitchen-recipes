@@ -180,6 +180,15 @@ class StockItem(Base):
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
 
+class ReceiptDraft(Base):
+    """Черновик чека — ожидает редактирования перед добавлением на склад"""
+    __tablename__ = "receipt_drafts"
+    id = Column(Integer, primary_key=True)
+    ocr_text = Column(Text, nullable=True)
+    items = Column(JSON, nullable=False, default=list)  # List[{name: str, quantity: str}]
+    created_at = Column(DateTime, default=utcnow)
+
+
 class PreparedDish(Base):
     """Заготовки — приготовленные блюда в холодильнике/морозильнике"""
     __tablename__ = "prepared_dishes"

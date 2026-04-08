@@ -795,6 +795,62 @@ select.form-control[multiple] {
   background: #fff1f2;
 }
 
+/* ─── RECEIPT DRAFTS ─── */
+.draft-zone {
+  margin-bottom: 20px;
+}
+.draft-zone-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.draft-card {
+  background: #fffbeb;
+  border: 2px solid #f59e0b;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.draft-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.draft-card-title {
+  font-weight: 700;
+  font-size: 14px;
+}
+.draft-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.draft-item-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.draft-item-row .form-control {
+  padding: 4px 8px;
+  font-size: 13px;
+  height: auto;
+}
+.draft-item-name { flex: 1; }
+.draft-item-qty  { width: 110px; flex-shrink: 0; }
+.draft-item-del  { flex-shrink: 0; }
+.draft-empty {
+  color: var(--c-text-muted);
+  font-size: 13px;
+  font-style: italic;
+}
+
 /* ─── MEMBERS PAGE ─── */
 .members-grid {
   display: grid;

@@ -9,11 +9,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.models import AppSettings, StockItem, PreparedDish
+from app.models import AppSettings, StockItem, PreparedDish, ReceiptDraft
 from app.schemas import (
     StockItemCreate, StockItemUpdate, StockItemOut,
     PreparedDishCreate, PreparedDishUpdate, PreparedDishOut,
-    ReceiptProcessResult, ReceiptProductResult,
+    ReceiptDraftOut, ReceiptDraftUpdate, ReceiptDraftCommit, ReceiptDraftResult,
 )
 from app.auth import get_current_user
 
@@ -101,7 +101,7 @@ def _apply_synonyms(
 
 # ── Receipt Processing ───────────────────────────────────────────────────────
 
-@router.post("/receipt", response_model=ReceiptProcessResult)
+@router.post("/receipt", response_model=ReceiptDraftResult)
 async def process_receipt(
     image: UploadFile = File(..., description="Photo of a store receipt (JPEG, PNG, WEBP – max 10 MB)"),
     db: AsyncSession = Depends(get_db),
@@ -116,7 +116,8 @@ async def process_receipt(
       3. Synonym lookup → normalise product names
          • If a product name has no synonym entry → register it as *unresolved*
            in the `warehouse_unresolved_synonyms` settings key.
-      4. Persist every product as a StockItem (warehouse).
+      4. Save products as a ReceiptDraft (not directly to warehouse).
+         The draft must be reviewed and committed via POST /drafts/{id}/commit.
 
     Protected by standard JWT Bearer auth – include the Authorization header.
     """
@@ -148,10 +149,14 @@ async def process_receipt(
         raise HTTPException(status_code=502, detail="Could not parse receipt via OpenAI.")
 
     if not products:
-        return ReceiptProcessResult(
+        draft = ReceiptDraft(ocr_text=ocr_text, items=[])
+        db.add(draft)
+        await db.commit()
+        await db.refresh(draft)
+        return ReceiptDraftResult(
+            draft_id=draft.id,
             ocr_text=ocr_text,
-            products_found=0,
-            products_added=[],
+            items_count=0,
             unresolved_synonyms=[],
         )
 
@@ -161,9 +166,8 @@ async def process_receipt(
     unresolved: list[str] = _load_unresolved(await _get_setting_value(db, _UNRESOLVED_KEY))
     newly_unresolved: list[str] = []
 
-    # ── 5. Process each product ───────────────────────────────────────────────
-    today = date.today()
-    added_products: list[ReceiptProductResult] = []
+    # ── 5. Build draft items (synonym normalization, no DB writes to stock) ───
+    draft_items: list[dict] = []
 
     for product in products:
         original_name = product["name"]
@@ -175,28 +179,92 @@ async def process_receipt(
             unresolved.append(normalized)
             newly_unresolved.append(normalized)
 
-        stock_item = StockItem(name=normalized, quantity=quantity, added_on=today)
-        db.add(stock_item)
+        draft_items.append({"name": normalized, "quantity": quantity})
 
-        added_products.append(ReceiptProductResult(
-            original_name=original_name,
-            normalized_name=normalized,
-            quantity=quantity,
-            unresolved=is_unresolved,
-        ))
-
-    # ── 6. Persist unresolved list & stock items ──────────────────────────────
+    # ── 6. Persist unresolved list & draft ────────────────────────────────────
     if newly_unresolved:
         await _set_setting_value(db, _UNRESOLVED_KEY, json.dumps(unresolved, ensure_ascii=False))
 
+    draft = ReceiptDraft(ocr_text=ocr_text, items=draft_items)
+    db.add(draft)
     await db.commit()
+    await db.refresh(draft)
 
-    return ReceiptProcessResult(
+    return ReceiptDraftResult(
+        draft_id=draft.id,
         ocr_text=ocr_text,
-        products_found=len(products),
-        products_added=added_products,
+        items_count=len(draft_items),
         unresolved_synonyms=newly_unresolved,
     )
+
+
+# ── Receipt Drafts ────────────────────────────────────────────────────────────
+
+@router.get("/drafts", response_model=List[ReceiptDraftOut])
+async def list_drafts(db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
+    result = await db.execute(select(ReceiptDraft).order_by(ReceiptDraft.created_at.desc()))
+    return result.scalars().all()
+
+
+@router.patch("/drafts/{draft_id}", response_model=ReceiptDraftOut)
+async def update_draft(
+    draft_id: int,
+    data: ReceiptDraftUpdate,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    result = await db.execute(select(ReceiptDraft).where(ReceiptDraft.id == draft_id))
+    draft = result.scalar_one_or_none()
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    draft.items = [item.model_dump() for item in data.items]
+    await db.commit()
+    await db.refresh(draft)
+    return draft
+
+
+@router.delete("/drafts/{draft_id}")
+async def delete_draft(
+    draft_id: int,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    result = await db.execute(select(ReceiptDraft).where(ReceiptDraft.id == draft_id))
+    draft = result.scalar_one_or_none()
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    await db.delete(draft)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/drafts/{draft_id}/commit")
+async def commit_draft(
+    draft_id: int,
+    data: ReceiptDraftCommit,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    """
+    Commit a receipt draft to the warehouse.
+    The request body contains the final (possibly edited) list of items to add.
+    The draft is deleted after committing.
+    """
+    result = await db.execute(select(ReceiptDraft).where(ReceiptDraft.id == draft_id))
+    draft = result.scalar_one_or_none()
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+
+    today = date.today()
+    count = 0
+    for item in data.items:
+        if item.name.strip():
+            db.add(StockItem(name=item.name.strip(), quantity=item.quantity, added_on=today))
+            count += 1
+
+    await db.delete(draft)
+    await db.commit()
+    return {"items_added": count}
 
 
 # ── Stock Items (В наличии) ──────────────────────────────────────────────────

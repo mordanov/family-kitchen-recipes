@@ -309,7 +309,40 @@ class PreparedDishOut(BaseModel):
         from_attributes = True
 
 
-# ─── Receipt processing ───
+# ─── Receipt drafts ───
+
+class DraftItem(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    quantity: str = Field("", max_length=100)
+
+
+class ReceiptDraftOut(BaseModel):
+    id: int
+    ocr_text: Optional[str]
+    items: List[DraftItem]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ReceiptDraftUpdate(BaseModel):
+    items: List[DraftItem]
+
+
+class ReceiptDraftCommit(BaseModel):
+    items: List[DraftItem]
+
+
+class ReceiptDraftResult(BaseModel):
+    """Result returned by POST /api/warehouse/receipt (saved to draft)."""
+    draft_id: int
+    ocr_text: str
+    items_count: int
+    unresolved_synonyms: List[str]
+
+
+# ─── Receipt processing (kept for reference, superseded by ReceiptDraftResult) ───
 
 class ReceiptProductResult(BaseModel):
     """Single product extracted from a receipt."""
@@ -317,14 +350,6 @@ class ReceiptProductResult(BaseModel):
     normalized_name: str
     quantity: str
     unresolved: bool  # True if no synonym was found – added to the unresolved list
-
-
-class ReceiptProcessResult(BaseModel):
-    """Result returned by POST /api/warehouse/receipt."""
-    ocr_text: str
-    products_found: int
-    products_added: List[ReceiptProductResult]
-    unresolved_synonyms: List[str]  # product names newly added to the unresolved list
 
 
 # ─── Family Members ───

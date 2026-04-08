@@ -8,13 +8,14 @@ const WarehousePage = (() => {
     const content = document.getElementById('warehouse-content');
     content.innerHTML = '<div class="spinner"></div>';
     try {
-      const [stock, prepared, recipeList] = await Promise.all([
+      const [stock, prepared, recipeList, drafts] = await Promise.all([
         API.listStock(),
         API.listPrepared(),
         API.listRecipes(),
+        API.listDrafts(),
       ]);
       recipes = recipeList;
-      render(stock, prepared);
+      render(stock, prepared, drafts);
     } catch (e) {
       content.innerHTML = `<p style="color:var(--c-danger)">Ошибка загрузки: ${e.message}</p>`;
     }
@@ -24,9 +25,11 @@ const WarehousePage = (() => {
     return new Date().toISOString().slice(0, 10);
   }
 
-  function render(stock, prepared) {
+  function render(stock, prepared, drafts) {
     const content = document.getElementById('warehouse-content');
     content.innerHTML = `
+      ${drafts.length ? renderDraftsZone(drafts) : ''}
+
       <div class="warehouse-grid">
         <section class="warehouse-section">
           <div class="warehouse-section-header">
@@ -114,6 +117,45 @@ const WarehousePage = (() => {
     bindRowActions(content);
   }
 
+  function renderDraftsZone(drafts) {
+    return `
+      <div class="draft-zone">
+        <div class="draft-zone-header">📋 Черновики чеков (${drafts.length})</div>
+        ${drafts.map(draft => renderDraftCard(draft)).join('')}
+      </div>
+    `;
+  }
+
+  function renderDraftCard(draft) {
+    const dt = new Date(draft.created_at);
+    const dateStr = dt.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const timeStr = dt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const itemsHtml = draft.items.length
+      ? draft.items.map((item, idx) => `
+          <div class="draft-item-row" data-idx="${idx}">
+            <input class="form-control draft-item-name" value="${escAttr(item.name)}" placeholder="Продукт" />
+            <input class="form-control draft-item-qty" value="${escAttr(item.quantity)}" placeholder="Кол-во" />
+            <button class="btn btn-secondary btn-sm warehouse-delete-btn draft-item-del js-del-draft-item" title="Удалить строку">✕</button>
+          </div>
+        `).join('')
+      : '<p class="draft-empty">Нет позиций</p>';
+
+    return `
+      <div class="draft-card" data-draft-id="${draft.id}">
+        <div class="draft-card-header">
+          <span class="draft-card-title">Чек от ${dateStr} ${timeStr}</span>
+          <div class="draft-card-actions">
+            <button class="btn btn-primary btn-sm js-commit-draft" data-draft-id="${draft.id}">✓ Добавить на склад</button>
+            <button class="btn btn-secondary btn-sm warehouse-delete-btn js-discard-draft" data-draft-id="${draft.id}">✕ Удалить черновик</button>
+          </div>
+        </div>
+        <div class="draft-items-list">
+          ${itemsHtml}
+        </div>
+      </div>
+    `;
+  }
+
   function renderStockList(items) {
     if (!items.length) return '<p class="text-muted">Список пуст</p>';
     return `<div class="warehouse-panel-list">${items.map(item => `
@@ -197,6 +239,26 @@ const WarehousePage = (() => {
 
     root.querySelectorAll('.js-delete-prepared').forEach(btn => {
       btn.addEventListener('click', () => deletePrepared(Number(btn.dataset.id)));
+    });
+
+    // Draft row actions
+    root.querySelectorAll('.js-del-draft-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const row = btn.closest('.draft-item-row');
+        const list = row.parentElement;
+        row.remove();
+        if (!list.querySelector('.draft-item-row')) {
+          list.innerHTML = '<p class="draft-empty">Нет позиций</p>';
+        }
+      });
+    });
+
+    root.querySelectorAll('.js-commit-draft').forEach(btn => {
+      btn.addEventListener('click', () => commitDraft(Number(btn.dataset.draftId), btn));
+    });
+
+    root.querySelectorAll('.js-discard-draft').forEach(btn => {
+      btn.addEventListener('click', () => discardDraft(Number(btn.dataset.draftId)));
     });
   }
 
@@ -306,6 +368,38 @@ const WarehousePage = (() => {
     if (!confirm('Удалить заготовку?')) return;
     try {
       await API.deletePrepared(id);
+      await load();
+    } catch (e) {
+      App.toast('Ошибка: ' + e.message, 'error');
+    }
+  }
+
+  async function commitDraft(draftId, triggerBtn) {
+    const card = triggerBtn.closest('.draft-card');
+    const rows = card.querySelectorAll('.draft-item-row');
+    const items = [];
+    rows.forEach(row => {
+      const name = row.querySelector('.draft-item-name').value.trim();
+      const quantity = row.querySelector('.draft-item-qty').value.trim();
+      if (name) items.push({ name, quantity });
+    });
+    if (!items.length) {
+      App.toast('Нет позиций для добавления на склад', 'error');
+      return;
+    }
+    try {
+      const res = await API.commitDraft(draftId, { items });
+      App.toast(`Добавлено на склад: ${res.items_added} поз.`, 'success');
+      await load();
+    } catch (e) {
+      App.toast('Ошибка: ' + e.message, 'error');
+    }
+  }
+
+  async function discardDraft(draftId) {
+    if (!confirm('Удалить черновик чека?')) return;
+    try {
+      await API.deleteDraft(draftId);
       await load();
     } catch (e) {
       App.toast('Ошибка: ' + e.message, 'error');

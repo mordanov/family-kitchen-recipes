@@ -108,6 +108,12 @@ const API = (() => {
     updatePrepared:   (id, data)    => request('PATCH',  `/warehouse/prepared/${id}`, data),
     deletePrepared:   (id)          => request('DELETE', `/warehouse/prepared/${id}`),
 
+    // Warehouse – receipt drafts
+    listDrafts:       ()            => request('GET',    '/warehouse/drafts'),
+    updateDraft:      (id, data)    => request('PATCH',  `/warehouse/drafts/${id}`, data),
+    deleteDraft:      (id)          => request('DELETE', `/warehouse/drafts/${id}`),
+    commitDraft:      (id, data)    => request('POST',   `/warehouse/drafts/${id}/commit`, data),
+
     // Settings for warehouse matching
     getProductSynonyms: () => request('GET', '/settings/warehouse/product-synonyms'),
     setProductSynonyms: (aliases) => request('PUT', '/settings/warehouse/product-synonyms', { aliases }),
