@@ -82,12 +82,20 @@ async def parse_products_with_openai(ocr_text: str) -> list[dict]:
     content = response.choices[0].message.content.strip()
     logger.info(f"OpenAI receipt parse (first 300 chars): {content[:300]}")
 
-    json_match = re.search(r"\[.*?\]", content, re.DOTALL)
-    if not json_match:
+    # Strip markdown code fences if present
+    content = re.sub(r"```(?:json)?\s*", "", content).strip()
+
+    start = content.find("[")
+    end = content.rfind("]")
+    if start == -1 or end == -1 or end <= start:
         logger.warning(f"No JSON array found in OpenAI response: {content}")
         return []
 
-    data = json.loads(json_match.group())
+    try:
+        data = json.loads(content[start : end + 1])
+    except json.JSONDecodeError as exc:
+        logger.warning(f"JSON decode error in OpenAI response: {exc} | content: {content}")
+        return []
     products: list[dict] = []
     for item in data:
         if not isinstance(item, dict):

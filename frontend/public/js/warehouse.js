@@ -157,7 +157,7 @@ const WarehousePage = (() => {
     const timeStr = dt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     const n = draft.items.length;
     return `
-      <div class="draft-list-row js-open-draft" data-draft-id="${draft.id}">
+      <div class="draft-list-row js-open-draft" data-draft-id="${draft.id}" data-ocr-text="${escAttr(draft.ocr_text || '')}">
         <span class="draft-list-date">${dateStr} ${timeStr}</span>
         <span class="draft-list-count">${n} ${pluralItems(n)}</span>
         <span class="draft-list-arrow">›</span>
@@ -180,7 +180,7 @@ const WarehousePage = (() => {
     const dateStr = dt.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const timeStr = dt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('draft-modal-title').textContent = `Чек от ${dateStr} ${timeStr}`;
-    renderDraftModalItems(draft.items);
+    renderDraftModalItems(draft.items, draft.ocr_text);
     document.getElementById('draft-modal').classList.add('open');
   }
 
@@ -189,16 +189,29 @@ const WarehousePage = (() => {
     currentDraftId = null;
   }
 
-  function renderDraftModalItems(items) {
+  function renderDraftModalItems(items, ocrText) {
     const container = document.getElementById('draft-modal-items');
+    const ocrBlock = ocrText ? `
+      <details class="draft-ocr-details">
+        <summary class="draft-ocr-summary">Текст с чека (OCR)</summary>
+        <pre class="draft-ocr-text">${escHtml(ocrText)}</pre>
+      </details>
+    ` : '';
     container.innerHTML = items.map(item => `
       <div class="draft-item-row">
         <input class="form-control draft-item-name" value="${escAttr(item.name)}" placeholder="Продукт" />
         <input class="form-control draft-item-qty" value="${escAttr(item.quantity)}" placeholder="Кол-во" />
         <button class="btn btn-secondary btn-sm warehouse-delete-btn js-del-modal-item" title="Удалить строку">✕</button>
       </div>
-    `).join('');
+    `).join('') + ocrBlock;
     _bindModalDeleteButtons(container);
+  }
+
+  function escHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   }
 
   function _bindModalDeleteButtons(container) {
