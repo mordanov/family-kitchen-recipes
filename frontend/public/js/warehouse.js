@@ -1,21 +1,24 @@
 /**
- * Warehouse page: stock items and prepared dishes.
+ * Warehouse page: stock items, prepared dishes, and receipt drafts.
  */
 const WarehousePage = (() => {
   let recipes = [];
+  let drafts = [];          // cached for modal access without re-fetch
+  let currentDraftId = null; // draft open in the modal right now
 
   async function load() {
     const content = document.getElementById('warehouse-content');
     content.innerHTML = '<div class="spinner"></div>';
     try {
-      const [stock, prepared, recipeList, drafts] = await Promise.all([
+      const [stock, prepared, recipeList, draftList] = await Promise.all([
         API.listStock(),
         API.listPrepared(),
         API.listRecipes(),
         API.listDrafts(),
       ]);
       recipes = recipeList;
-      render(stock, prepared, drafts);
+      drafts = draftList;
+      render(stock, prepared, draftList);
     } catch (e) {
       content.innerHTML = `<p style="color:var(--c-danger)">Ошибка загрузки: ${e.message}</p>`;
     }
@@ -25,10 +28,12 @@ const WarehousePage = (() => {
     return new Date().toISOString().slice(0, 10);
   }
 
-  function render(stock, prepared, drafts) {
+  // ── Main render ─────────────────────────────────────────────────────────────
+
+  function render(stock, prepared, draftList) {
     const content = document.getElementById('warehouse-content');
     content.innerHTML = `
-      ${drafts.length ? renderDraftsZone(drafts) : ''}
+      ${draftList.length ? renderDraftsZone(draftList) : ''}
 
       <div class="warehouse-grid">
         <section class="warehouse-section">
@@ -110,51 +115,147 @@ const WarehousePage = (() => {
           </div>
         </div>
       </div>
+
+      <div class="modal-backdrop" id="draft-modal">
+        <div class="modal" style="max-width:520px">
+          <div class="modal-header">
+            <h2 id="draft-modal-title">Чек</h2>
+            <button class="modal-close js-close-draft">✕</button>
+          </div>
+          <div class="modal-body">
+            <div id="draft-modal-items"></div>
+            <button class="btn btn-secondary btn-sm js-add-draft-row" style="margin-top:10px">+ Добавить позицию</button>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary warehouse-delete-btn js-discard-draft-modal">Удалить черновик</button>
+            <button class="btn btn-primary js-commit-draft-modal">Применить</button>
+          </div>
+        </div>
+      </div>
     `;
 
-    // Bind after DOM render to avoid inline onclick parsing issues.
     bindStaticActions(content);
     bindRowActions(content);
   }
 
-  function renderDraftsZone(drafts) {
+  // ── Draft zone (compact list) ────────────────────────────────────────────────
+
+  function renderDraftsZone(draftList) {
     return `
       <div class="draft-zone">
-        <div class="draft-zone-header">📋 Черновики чеков (${drafts.length})</div>
-        ${drafts.map(draft => renderDraftCard(draft)).join('')}
+        <div class="draft-zone-header">📋 Черновики чеков (${draftList.length})</div>
+        <div class="draft-list">
+          ${draftList.map(d => renderDraftRow(d)).join('')}
+        </div>
       </div>
     `;
   }
 
-  function renderDraftCard(draft) {
+  function renderDraftRow(draft) {
     const dt = new Date(draft.created_at);
     const dateStr = dt.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const timeStr = dt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-    const itemsHtml = draft.items.length
-      ? draft.items.map((item, idx) => `
-          <div class="draft-item-row" data-idx="${idx}">
-            <input class="form-control draft-item-name" value="${escAttr(item.name)}" placeholder="Продукт" />
-            <input class="form-control draft-item-qty" value="${escAttr(item.quantity)}" placeholder="Кол-во" />
-            <button class="btn btn-secondary btn-sm warehouse-delete-btn draft-item-del js-del-draft-item" title="Удалить строку">✕</button>
-          </div>
-        `).join('')
-      : '<p class="draft-empty">Нет позиций</p>';
-
+    const n = draft.items.length;
     return `
-      <div class="draft-card" data-draft-id="${draft.id}">
-        <div class="draft-card-header">
-          <span class="draft-card-title">Чек от ${dateStr} ${timeStr}</span>
-          <div class="draft-card-actions">
-            <button class="btn btn-primary btn-sm js-commit-draft" data-draft-id="${draft.id}">✓ Добавить на склад</button>
-            <button class="btn btn-secondary btn-sm warehouse-delete-btn js-discard-draft" data-draft-id="${draft.id}">✕ Удалить черновик</button>
-          </div>
-        </div>
-        <div class="draft-items-list">
-          ${itemsHtml}
-        </div>
+      <div class="draft-list-row js-open-draft" data-draft-id="${draft.id}">
+        <span class="draft-list-date">${dateStr} ${timeStr}</span>
+        <span class="draft-list-count">${n} ${pluralItems(n)}</span>
+        <span class="draft-list-arrow">›</span>
       </div>
     `;
   }
+
+  function pluralItems(n) {
+    const mod10 = n % 10, mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'позиция';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'позиции';
+    return 'позиций';
+  }
+
+  // ── Draft modal ──────────────────────────────────────────────────────────────
+
+  function openDraftModal(draft) {
+    currentDraftId = draft.id;
+    const dt = new Date(draft.created_at);
+    const dateStr = dt.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const timeStr = dt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('draft-modal-title').textContent = `Чек от ${dateStr} ${timeStr}`;
+    renderDraftModalItems(draft.items);
+    document.getElementById('draft-modal').classList.add('open');
+  }
+
+  function closeDraftModal() {
+    document.getElementById('draft-modal').classList.remove('open');
+    currentDraftId = null;
+  }
+
+  function renderDraftModalItems(items) {
+    const container = document.getElementById('draft-modal-items');
+    container.innerHTML = items.map(item => `
+      <div class="draft-item-row">
+        <input class="form-control draft-item-name" value="${escAttr(item.name)}" placeholder="Продукт" />
+        <input class="form-control draft-item-qty" value="${escAttr(item.quantity)}" placeholder="Кол-во" />
+        <button class="btn btn-secondary btn-sm warehouse-delete-btn js-del-modal-item" title="Удалить строку">✕</button>
+      </div>
+    `).join('');
+    _bindModalDeleteButtons(container);
+  }
+
+  function _bindModalDeleteButtons(container) {
+    container.querySelectorAll('.js-del-modal-item').forEach(btn => {
+      btn.addEventListener('click', () => btn.closest('.draft-item-row').remove());
+    });
+  }
+
+  function addDraftModalRow() {
+    const container = document.getElementById('draft-modal-items');
+    const row = document.createElement('div');
+    row.className = 'draft-item-row';
+    row.innerHTML = `
+      <input class="form-control draft-item-name" value="" placeholder="Продукт" />
+      <input class="form-control draft-item-qty" value="" placeholder="Кол-во" />
+      <button class="btn btn-secondary btn-sm warehouse-delete-btn js-del-modal-item" title="Удалить строку">✕</button>
+    `;
+    row.querySelector('.js-del-modal-item').addEventListener('click', () => row.remove());
+    container.appendChild(row);
+    row.querySelector('.draft-item-name').focus();
+  }
+
+  async function commitDraftFromModal() {
+    try {
+      const container = document.getElementById('draft-modal-items');
+      const rows = container ? container.querySelectorAll('.draft-item-row') : [];
+      const items = [];
+      rows.forEach(row => {
+        const name = (row.querySelector('.draft-item-name')?.value || '').trim();
+        const quantity = (row.querySelector('.draft-item-qty')?.value || '').trim();
+        if (name) items.push({ name, quantity });
+      });
+      if (!items.length) {
+        App.toast('Нет позиций для добавления на склад', 'error');
+        return;
+      }
+      const res = await API.commitDraft(currentDraftId, { items });
+      App.toast(`Добавлено на склад: ${res.items_added} поз.`, 'success');
+      closeDraftModal();
+      await load();
+    } catch (e) {
+      App.toast('Ошибка: ' + e.message, 'error');
+    }
+  }
+
+  async function discardDraftFromModal() {
+    if (!confirm('Удалить черновик чека?')) return;
+    try {
+      await API.deleteDraft(currentDraftId);
+      closeDraftModal();
+      await load();
+    } catch (e) {
+      App.toast('Ошибка: ' + e.message, 'error');
+    }
+  }
+
+  // ── Stock list ───────────────────────────────────────────────────────────────
 
   function renderStockList(items) {
     if (!items.length) return '<p class="text-muted">Список пуст</p>';
@@ -209,6 +310,8 @@ const WarehousePage = (() => {
       .replace(/>/g, '&gt;');
   }
 
+  // ── Event binding ────────────────────────────────────────────────────────────
+
   function bindRowActions(root) {
     root.querySelectorAll('.js-edit-stock').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -241,24 +344,12 @@ const WarehousePage = (() => {
       btn.addEventListener('click', () => deletePrepared(Number(btn.dataset.id)));
     });
 
-    // Draft row actions
-    root.querySelectorAll('.js-del-draft-item').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const row = btn.closest('.draft-item-row');
-        const list = row.parentElement;
-        row.remove();
-        if (!list.querySelector('.draft-item-row')) {
-          list.innerHTML = '<p class="draft-empty">Нет позиций</p>';
-        }
+    root.querySelectorAll('.js-open-draft').forEach(row => {
+      row.addEventListener('click', () => {
+        const id = Number(row.dataset.draftId);
+        const draft = drafts.find(d => d.id === id);
+        if (draft) openDraftModal(draft);
       });
-    });
-
-    root.querySelectorAll('.js-commit-draft').forEach(btn => {
-      btn.addEventListener('click', () => commitDraft(Number(btn.dataset.draftId), btn));
-    });
-
-    root.querySelectorAll('.js-discard-draft').forEach(btn => {
-      btn.addEventListener('click', () => discardDraft(Number(btn.dataset.draftId)));
     });
   }
 
@@ -269,20 +360,30 @@ const WarehousePage = (() => {
     const openPrepared = root.querySelector('.js-open-prepared');
     if (openPrepared) openPrepared.addEventListener('click', () => openPreparedModal());
 
-    root.querySelectorAll('.js-close-stock').forEach(btn => {
-      btn.addEventListener('click', closeStockModal);
-    });
-
-    root.querySelectorAll('.js-close-prepared').forEach(btn => {
-      btn.addEventListener('click', closePreparedModal);
-    });
+    root.querySelectorAll('.js-close-stock').forEach(btn => btn.addEventListener('click', closeStockModal));
+    root.querySelectorAll('.js-close-prepared').forEach(btn => btn.addEventListener('click', closePreparedModal));
 
     const saveStockBtn = root.querySelector('.js-save-stock');
     if (saveStockBtn) saveStockBtn.addEventListener('click', saveStock);
 
     const savePreparedBtn = root.querySelector('.js-save-prepared');
     if (savePreparedBtn) savePreparedBtn.addEventListener('click', savePrepared);
+
+    // Draft modal
+    const closeDraftBtn = root.querySelector('.js-close-draft');
+    if (closeDraftBtn) closeDraftBtn.addEventListener('click', closeDraftModal);
+
+    const addRowBtn = root.querySelector('.js-add-draft-row');
+    if (addRowBtn) addRowBtn.addEventListener('click', addDraftModalRow);
+
+    const commitBtn = root.querySelector('.js-commit-draft-modal');
+    if (commitBtn) commitBtn.addEventListener('click', commitDraftFromModal);
+
+    const discardBtn = root.querySelector('.js-discard-draft-modal');
+    if (discardBtn) discardBtn.addEventListener('click', discardDraftFromModal);
   }
+
+  // ── Stock modal ──────────────────────────────────────────────────────────────
 
   function openStockModal(id = null, name = '', quantity = '', addedOn = '') {
     document.getElementById('stock-modal-title').textContent = id ? 'Редактировать продукт' : 'Добавить продукт';
@@ -326,6 +427,8 @@ const WarehousePage = (() => {
       App.toast('Ошибка: ' + e.message, 'error');
     }
   }
+
+  // ── Prepared modal ───────────────────────────────────────────────────────────
 
   function openPreparedModal(id = null, recipeId = '', servings = 1, note = '', addedOn = '') {
     document.getElementById('prepared-modal-title').textContent = id ? 'Редактировать заготовку' : 'Добавить заготовку';
@@ -374,47 +477,10 @@ const WarehousePage = (() => {
     }
   }
 
-  async function commitDraft(draftId, triggerBtn) {
-    try {
-      const card = triggerBtn.closest('.draft-card');
-      const rows = card ? card.querySelectorAll('.draft-item-row') : [];
-      const items = [];
-      rows.forEach(row => {
-        const name = (row.querySelector('.draft-item-name') || {}).value || '';
-        const quantity = (row.querySelector('.draft-item-qty') || {}).value || '';
-        if (name.trim()) items.push({ name: name.trim(), quantity: quantity.trim() });
-      });
-      if (!items.length) {
-        App.toast('Нет позиций для добавления на склад', 'error');
-        return;
-      }
-      const res = await API.commitDraft(draftId, { items });
-      App.toast(`Добавлено на склад: ${res.items_added} поз.`, 'success');
-      await load();
-    } catch (e) {
-      App.toast('Ошибка: ' + e.message, 'error');
-    }
-  }
-
-  async function discardDraft(draftId) {
-    if (!confirm('Удалить черновик чека?')) return;
-    try {
-      await API.deleteDraft(draftId);
-      await load();
-    } catch (e) {
-      App.toast('Ошибка: ' + e.message, 'error');
-    }
-  }
-
   return {
     load,
-    openStockModal,
-    closeStockModal,
-    saveStock,
-    deleteStock,
-    openPreparedModal,
-    closePreparedModal,
-    savePrepared,
-    deletePrepared,
+    openStockModal, closeStockModal, saveStock, deleteStock,
+    openPreparedModal, closePreparedModal, savePrepared, deletePrepared,
+    openDraftModal, closeDraftModal,
   };
 })();

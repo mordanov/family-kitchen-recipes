@@ -807,30 +807,38 @@ select.form-control[multiple] {
   letter-spacing: 0.5px;
   margin-bottom: 10px;
 }
-.draft-card {
-  background: #fffbeb;
-  border: 2px solid #f59e0b;
-  border-radius: 14px;
-  padding: 14px;
-  margin-bottom: 12px;
+.draft-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
-.draft-card-header {
+.draft-list-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 12px;
+  padding: 11px 16px;
+  background: #fffbeb;
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
 }
-.draft-card-title {
+.draft-list-row:hover { background: #fef3c7; }
+.draft-list-date {
   font-weight: 700;
   font-size: 14px;
 }
-.draft-card-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+.draft-list-count {
+  color: var(--c-text-muted);
+  font-size: 13px;
 }
+.draft-list-arrow {
+  margin-left: auto;
+  font-size: 20px;
+  color: #f59e0b;
+}
+/* Draft modal items (same layout reused from modal body) */
 .draft-item-row {
   display: flex;
   gap: 8px;
@@ -844,12 +852,6 @@ select.form-control[multiple] {
 }
 .draft-item-name { flex: 1; }
 .draft-item-qty  { width: 110px; flex-shrink: 0; }
-.draft-item-del  { flex-shrink: 0; }
-.draft-empty {
-  color: var(--c-text-muted);
-  font-size: 13px;
-  font-style: italic;
-}
 
 /* ─── MEMBERS PAGE ─── */
 .members-grid {
