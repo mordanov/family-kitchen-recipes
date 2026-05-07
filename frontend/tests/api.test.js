@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { loadBrowserScript } from './helpers/loadBrowserScript'
+import { api } from '../src/api'
 
 function jsonResponse(body, status = 200, contentType = 'application/json') {
   return {
@@ -27,14 +27,14 @@ function binaryResponse(blob, status = 200, contentType = 'application/pdf') {
 
 describe('API client', () => {
   beforeEach(() => {
-    loadBrowserScript('../../public/js/api.js', 'API')
+    localStorage.clear()
   })
 
   it('adds the bearer token header and parses json responses', async () => {
     localStorage.setItem('token', 'jwt-token')
     fetch.mockResolvedValue(jsonResponse({ username: 'chef' }))
 
-    const result = await window.API.me()
+    const result = await api.me()
 
     expect(result).toEqual({ username: 'chef' })
     expect(fetch).toHaveBeenCalledTimes(1)
@@ -49,7 +49,7 @@ describe('API client', () => {
     localStorage.setItem('token', 'expired-token')
     fetch.mockResolvedValue(jsonResponse({ detail: 'expired' }, 401))
 
-    const result = await window.API.me()
+    const result = await api.me()
 
     expect(result).toBeUndefined()
     expect(localStorage.getItem('token')).toBeNull()
@@ -59,7 +59,7 @@ describe('API client', () => {
   it('encodes recipe search strings in listRecipes requests', async () => {
     fetch.mockResolvedValue(jsonResponse([]))
 
-    await window.API.listRecipes('сыр & суп')
+    await api.listRecipes('сыр & суп')
 
     const [url] = fetch.mock.calls[0]
     expect(url).toBe('/api/recipes/?search=%D1%81%D1%8B%D1%80%20%26%20%D1%81%D1%83%D0%BF')
@@ -70,7 +70,7 @@ describe('API client', () => {
     const pdfBlob = new Blob(['%PDF-test'], { type: 'application/pdf' })
     fetch.mockResolvedValue(binaryResponse(pdfBlob))
 
-    const result = await window.API.downloadRecipeMaterial(42)
+    const result = await api.downloadRecipeMaterial(42)
 
     expect(result).toBeInstanceOf(Blob)
     expect(result.type).toBe('application/pdf')

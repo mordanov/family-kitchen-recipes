@@ -11,6 +11,7 @@ function resetGlobal(name) {
 beforeEach(() => {
   document.body.innerHTML = ''
   localStorage.clear()
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
   resetGlobal('API')
   resetGlobal('App')

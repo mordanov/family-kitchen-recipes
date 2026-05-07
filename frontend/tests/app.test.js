@@ -1,86 +1,90 @@
+import React, { useEffect } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { loadBrowserScript } from './helpers/loadBrowserScript'
+import { changeValue, click, flushMicrotasks, renderReact } from './helpers/renderReact'
 
-function setGlobal(name, value) {
-  Object.defineProperty(globalThis, name, {
-    value,
-    writable: true,
-    configurable: true,
-  })
-}
+async function loadApp({ login = vi.fn(), me = vi.fn() } = {}) {
+  vi.resetModules()
 
-function renderAppShell() {
-  document.body.innerHTML = `
-    <div id="auth-screen" style="display:flex"></div>
-    <div id="app" style="display:none"></div>
-    <input id="login-username" value="" />
-    <input id="login-password" value="" />
-    <div id="auth-error" style="display:none"></div>
-    <div id="sidebar-username"></div>
-    <div id="toast-container"></div>
+  const pageLoads = {
+    recipes: vi.fn(),
+    menu: vi.fn(),
+    shopping: vi.fn(),
+    history: vi.fn(),
+    warehouse: vi.fn(),
+    members: vi.fn(),
+    settings: vi.fn(),
+  }
 
-    <button class="nav-item" data-page="recipes"></button>
-    <button class="nav-item" data-page="menu"></button>
-    <button class="nav-item" data-page="shopping"></button>
-    <button class="nav-item" data-page="history"></button>
+  const makePage = (name, key) => ({ active }) => {
+    useEffect(() => {
+      if (active) pageLoads[key]()
+    }, [active])
 
-    <section id="page-recipes" class="page"></section>
-    <section id="page-menu" class="page"></section>
-    <section id="page-shopping" class="page"></section>
-    <section id="page-history" class="page"></section>
-  `
-}
+    return React.createElement('section', {
+      'data-page': name,
+      'data-active': active ? 'true' : 'false',
+    })
+  }
 
-function stubPages() {
-  setGlobal('RecipesPage', { load: vi.fn() })
-  setGlobal('MenuPage', { load: vi.fn() })
-  setGlobal('ShoppingPage', { load: vi.fn() })
-  setGlobal('HistoryPage', { load: vi.fn() })
+  vi.doMock('../src/api.js', () => ({
+    api: { login, me },
+  }))
+  vi.doMock('../src/pages/RecipesPage.jsx', () => ({ RecipesPage: makePage('recipes', 'recipes') }))
+  vi.doMock('../src/pages/MenuPage.jsx', () => ({ MenuPage: makePage('menu', 'menu') }))
+  vi.doMock('../src/pages/ShoppingPage.jsx', () => ({ ShoppingPage: makePage('shopping', 'shopping') }))
+  vi.doMock('../src/pages/HistoryPage.jsx', () => ({ HistoryPage: makePage('history', 'history') }))
+  vi.doMock('../src/pages/WarehousePage.jsx', () => ({ WarehousePage: makePage('warehouse', 'warehouse') }))
+  vi.doMock('../src/pages/MembersPage.jsx', () => ({ MembersPage: makePage('members', 'members') }))
+  vi.doMock('../src/pages/SettingsPage.jsx', () => ({ SettingsPage: makePage('settings', 'settings') }))
+
+  const { default: App } = await import('../src/App.jsx')
+  const rendered = await renderReact(React.createElement(App))
+
+  return { ...rendered, login, me, pageLoads }
 }
 
 describe('App', () => {
   beforeEach(() => {
-    renderAppShell()
-    stubPages()
-    setGlobal('API', {
-      login: vi.fn(),
-      me: vi.fn(),
-    })
-
-    loadBrowserScript('../../public/js/app.js', 'App')
+    document.body.innerHTML = ''
+    localStorage.clear()
   })
 
   it('shows a validation error when login credentials are missing', async () => {
-    await window.App.login()
+    await loadApp()
 
-    expect(window.API.login).not.toHaveBeenCalled()
-    expect(document.getElementById('auth-error').textContent).toContain('Введите логин и пароль')
-    expect(document.getElementById('auth-error').style.display).toBe('block')
+    await click(document.querySelector('button.btn.btn-primary'))
+
+    expect(document.body.textContent).toContain('Введите логин и пароль')
   })
 
   it('stores the token and opens the app after a successful login', async () => {
-    document.getElementById('login-username').value = 'chef'
-    document.getElementById('login-password').value = 'secret'
-    window.API.login.mockResolvedValue({ access_token: 'jwt-token', username: 'chef' })
+    const login = vi.fn().mockResolvedValue({ access_token: 'jwt-token', username: 'chef' })
+    const { pageLoads } = await loadApp({ login, me: vi.fn().mockResolvedValue({ username: 'chef' }) })
 
-    await window.App.login()
+    await changeValue(document.getElementById('login-username'), 'chef')
+    await changeValue(document.getElementById('login-password'), 'secret')
+    await click(document.querySelector('button.btn.btn-primary'))
+    await flushMicrotasks()
 
     expect(localStorage.getItem('token')).toBe('jwt-token')
-    expect(document.getElementById('auth-screen').style.display).toBe('none')
-    expect(document.getElementById('app').style.display).toBe('block')
-    expect(document.getElementById('sidebar-username').textContent).toBe('chef')
-    expect(window.RecipesPage.load).toHaveBeenCalledTimes(1)
-    expect(document.getElementById('page-recipes').classList.contains('active')).toBe(true)
-    expect(document.querySelector('.nav-item[data-page="recipes"]').classList.contains('active')).toBe(true)
+    expect(document.body.textContent).toContain('Вы вошли как chef')
+    expect(pageLoads.recipes).toHaveBeenCalled()
+    expect(document.querySelector('.nav-item.active').textContent).toContain('Рецепты')
   })
 
-  it('activates the requested page and triggers its loader on navigation', () => {
-    window.App.navigate('shopping')
+  it('activates the requested page and triggers its loader on navigation', async () => {
+    localStorage.setItem('token', 'stored-token')
+    const me = vi.fn().mockResolvedValue({ username: 'chef' })
+    const { pageLoads } = await loadApp({ me })
+    await flushMicrotasks()
 
-    expect(document.getElementById('page-shopping').classList.contains('active')).toBe(true)
-    expect(document.querySelector('.nav-item[data-page="shopping"]').classList.contains('active')).toBe(true)
-    expect(window.ShoppingPage.load).toHaveBeenCalledTimes(1)
-    expect(window.RecipesPage.load).not.toHaveBeenCalled()
+    const shoppingButton = Array.from(document.querySelectorAll('.nav-item')).find((button) => button.textContent.includes('Список покупок'))
+    await click(shoppingButton)
+    await flushMicrotasks()
+
+    expect(document.querySelector('.nav-item.active').textContent).toContain('Список покупок')
+    expect(pageLoads.shopping).toHaveBeenCalled()
+    expect(pageLoads.recipes).toHaveBeenCalled()
   })
 })

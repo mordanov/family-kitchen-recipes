@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
 
 import { api } from '../api'
-import { Badge, ConfirmOverlay, EmptyState, Modal, PageHeader, ProgressBar, Spinner } from '../components'
-import { cookingMethodLabel, DAY_LABELS, formatDate, MEAL_LABELS, MEAL_ORDER, presetMenuTitle, weeksLabel } from '../utils'
+import { ConfirmOverlay, EmptyState, Modal, PageHeader, Spinner } from '../components'
+import { DAY_LABELS, MEAL_LABELS, MEAL_ORDER, presetMenuTitle } from '../utils'
+import { MenuAddPanel } from './menu/MenuAddPanel'
+import { MenuItemsList } from './menu/MenuItemsList'
+import { MenuStatusBanner } from './menu/MenuStatusBanner'
 
 function isMealSlotMenu(menu) {
   return Boolean(menu?.items?.some((item) => item.meal_type && item.day_of_week))
@@ -191,13 +194,22 @@ export function MenuPage({ active, toast, quickActions, setQuickActions }) {
     if (!autoForm.use_meal_slots) payload.recipes_per_week = Number(autoForm.recipes_per_week)
 
     try {
-      let menu
-      try {
-        menu = await api.createMenu({ title: autoForm.title.trim(), weeks: Number(autoForm.weeks) })
-      } catch (createError) {
-        const message = String(createError?.message || '')
+      let menu = null
+      const created = await api.createMenu({ title: autoForm.title.trim(), weeks: Number(autoForm.weeks) }).then(
+        (value) => ({ ok: true, value }),
+        (error) => ({ ok: false, error }),
+      )
+
+      if (created.ok) {
+        menu = created.value
+      } else {
+        const message = String(created.error?.message || '')
         const activeExists = message.includes('Уже есть активное меню') || message.toLowerCase().includes('active menu')
-        if (!activeExists) throw createError
+
+        if (!activeExists) {
+          toast(`Ошибка: ${created.error?.message || 'Не удалось создать меню'}`, 'error')
+          return
+        }
 
         const existing = await api.getActiveMenu().catch(() => null)
         if (existing && Array.isArray(existing.items) && existing.items.length === 0) {
@@ -300,122 +312,6 @@ export function MenuPage({ active, toast, quickActions, setQuickActions }) {
   const cookedItems = activeMenu?.items?.filter((item) => item.is_cooked).length || 0
   const progress = totalItems ? Math.round((cookedItems / totalItems) * 100) : 0
 
-  function renderSlotCard(item) {
-    const closed = activeMenu?.status === 'closed'
-    const body = item.member_assignments?.length ? item.member_assignments.map((assignment) => {
-      const member = allMembers.find((value) => value.id === assignment.member_id)
-      return (
-        <div key={`${item.id}-${assignment.member_id}`} className="slot-member-row">
-          <span className="slot-member-dot" style={{ background: member?.color || '#999' }} />
-          <span className="slot-member-name">{member?.name || `#${assignment.member_id}`}:</span>
-          <span className="slot-recipe-title">{assignment.recipe?.title || '—'}</span>
-        </div>
-      )
-    }) : (
-      <>
-        <div className="slot-recipe-title">{item.recipe?.title || 'Удалённый рецепт'}</div>
-        {item.recipe?.kbju_calculated ? <div className="slot-meta">{item.recipe.calories?.toFixed(0)} ккал</div> : null}
-      </>
-    )
-
-    return (
-      <div key={item.id} className={`slot-card ${item.is_cooked ? 'cooked' : ''}`}>
-        <button className={`slot-card-check ${item.is_cooked ? 'checked' : ''}`} onClick={() => toggleCooked(item.id, !item.is_cooked)}>{item.is_cooked ? '✓' : ''}</button>
-        <div className="slot-card-body">
-          {body}
-          {!closed && allMembers.length ? (
-            <div className="slot-quick-actions">
-              <button className="slot-quick-btn" onClick={() => makeSameForAll(item)}>👥 Одинаковое всем</button>
-              <button className="slot-quick-btn" onClick={() => makeDifferentForAll(item)}>🧩 Разные блюда</button>
-            </div>
-          ) : null}
-        </div>
-        {!closed ? <button className="slot-remove-btn" onClick={() => removeItem(item.id)}>✕</button> : null}
-      </div>
-    )
-  }
-
-  function renderFlatRow(item) {
-    const preparedServings = item.recipe ? preparedByRecipeId[item.recipe.id] || 0 : 0
-    const matchedStock = item.recipe?.shopping_list
-      ? item.recipe.shopping_list
-        .split('\n')
-        .map((line) => line.trim().toLowerCase().split(' ')[0])
-        .filter(Boolean)
-        .filter((token) => stockNames.has(token)).length
-      : 0
-
-    return (
-      <div key={item.id} className={`menu-item-row ${item.is_cooked ? 'cooked' : ''}`}>
-        <button className={`menu-item-check ${item.is_cooked ? 'checked' : ''}`} onClick={() => toggleCooked(item.id, !item.is_cooked)}>{item.is_cooked ? '✓' : ''}</button>
-        <div style={{ flex: 1 }}>
-          <div className="menu-item-title">{item.recipe ? item.recipe.title : (item.member_assignments?.length ? 'Разные блюда' : 'Удалённый рецепт')}</div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-            {item.day_of_week ? <Badge style={{ background: 'var(--c-surface2)', color: 'var(--c-text-muted)' }}>{DAY_LABELS[(item.day_of_week - 1) % 7]}</Badge> : null}
-            {item.meal_type ? <Badge style={{ background: 'var(--c-surface2)', color: 'var(--c-text-muted)' }}>{MEAL_LABELS[item.meal_type] || item.meal_type}</Badge> : null}
-            {item.recipe ? <span className="menu-item-meta">{cookingMethodLabel(item.recipe.cooking_method)} · {item.recipe.servings} порц.</span> : null}
-            {item.recipe?.kbju_calculated ? <span className="menu-item-kbju">{item.recipe.calories?.toFixed(0)} ккал</span> : null}
-            {preparedServings > 0 ? <Badge style={{ background: '#eef7ff', color: '#2b5a9a' }}>🍱 Заготовка: {preparedServings} порц.</Badge> : null}
-            {matchedStock > 0 ? <Badge style={{ background: '#f0fff8', color: '#1f7d4f' }}>✅ На складе: {matchedStock} поз.</Badge> : null}
-            {(item.member_assignments || []).map((assignment) => {
-              const member = allMembers.find((value) => value.id === assignment.member_id)
-              return (
-                <Badge key={`${item.id}-${assignment.member_id}`} style={{ background: `${member?.color || '#999'}20`, color: member?.color || '#999', border: '1px solid currentColor' }}>
-                  {member?.name || `#${assignment.member_id}`}: {assignment.recipe?.title || '—'}
-                </Badge>
-              )
-            })}
-          </div>
-        </div>
-        {activeMenu?.status !== 'closed' ? <button className="btn btn-secondary btn-sm" onClick={() => removeItem(item.id)}>✕</button> : null}
-      </div>
-    )
-  }
-
-  function renderItems() {
-    if (!weekItems.length) {
-      return (
-        <div style={{ textAlign: 'center', padding: 32, color: 'var(--c-text-muted)' }}>
-          <div style={{ fontSize: 40, marginBottom: 8 }}>🍽️</div>
-          <p>Блюда для этой недели ещё не добавлены</p>
-        </div>
-      )
-    }
-
-    if (!usesSlots) {
-      return weekItems.map(renderFlatRow)
-    }
-
-    const sortedDays = [...new Set(weekItems.filter((item) => item.day_of_week).map((item) => item.day_of_week))].sort((a, b) => a - b)
-    const sortedMeals = MEAL_ORDER.filter((meal) => weekItems.some((item) => item.meal_type === meal))
-    const grid = {}
-    weekItems.forEach((item) => {
-      if (!item.day_of_week || !item.meal_type) return
-      grid[item.day_of_week] ||= {}
-      grid[item.day_of_week][item.meal_type] ||= []
-      grid[item.day_of_week][item.meal_type].push(item)
-    })
-
-    return (
-      <div className="meal-grid">
-        <div className="meal-grid-header">
-          <div className="meal-grid-corner" />
-          {sortedMeals.map((meal) => <div key={meal} className="meal-grid-meal-label">{MEAL_LABELS[meal]}</div>)}
-        </div>
-        {sortedDays.map((day) => (
-          <div key={day} className="meal-grid-row">
-            <div className="meal-grid-day-label">{DAY_LABELS[(day - 1) % 7]}</div>
-            {sortedMeals.map((meal) => (
-              <div key={`${day}-${meal}`} className="meal-grid-cell">
-                {(grid[day]?.[meal] || []).length ? (grid[day]?.[meal] || []).map(renderSlotCard) : <div className="meal-grid-empty">—</div>}
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    )
-  }
-
   if (!active) return <div className="page" />
 
   return (
@@ -449,17 +345,7 @@ export function MenuPage({ active, toast, quickActions, setQuickActions }) {
 
       {!loading && activeMenu ? (
         <>
-          <div className={`menu-status-banner ${activeMenu.status === 'closed' ? 'closed' : ''}`}>
-            <div>
-              <h3>
-                {activeMenu.title}{' '}
-                {activeMenu.status === 'closed' ? <Badge style={{ background: '#e8e8ef', color: '#6B6B80' }}>Закрыто {formatDate(activeMenu.closed_at)}</Badge> : null}
-              </h3>
-              <p>{activeMenu.weeks} {weeksLabel(activeMenu.weeks)} · {totalItems} слотов · Готово: {cookedItems}/{totalItems}</p>
-              <div style={{ width: 200, marginTop: 10 }}><ProgressBar value={progress} /></div>
-            </div>
-            {activeMenu.status !== 'closed' ? <button className="btn btn-secondary" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', borderColor: 'rgba(255,255,255,0.3)' }} onClick={confirmClose}>Закрыть меню</button> : null}
-          </div>
+          <MenuStatusBanner menu={activeMenu} totalItems={totalItems} cookedItems={cookedItems} progress={progress} onClose={confirmClose} />
 
           <div className="weeks-tabs">
             {Array.from({ length: activeMenu.weeks }, (_, index) => index + 1).map((week) => (
@@ -467,74 +353,49 @@ export function MenuPage({ active, toast, quickActions, setQuickActions }) {
             ))}
           </div>
 
-          <div className="menu-items-list">{renderItems()}</div>
+          <div className="menu-items-list">
+            <MenuItemsList
+              weekItems={weekItems}
+              usesSlots={usesSlots}
+              activeMenu={activeMenu}
+              allMembers={allMembers}
+              preparedByRecipeId={preparedByRecipeId}
+              stockNames={stockNames}
+              onToggleCooked={toggleCooked}
+              onRemoveItem={removeItem}
+              onMakeSameForAll={makeSameForAll}
+              onMakeDifferentForAll={makeDifferentForAll}
+            />
+          </div>
 
           {activeMenu.status !== 'closed' ? (
-            <div className="add-recipe-panel">
-              <h4>➕ Добавить блюдо в меню (неделя {currentWeek})</h4>
-              <div className="form-row" style={{ gap: 8, marginBottom: 12 }}>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">День</label>
-                  <select className="form-control" value={addItemDay} onChange={(event) => setAddItemDay(event.target.value)}>
-                    <option value="">— без дня —</option>
-                    {DAY_LABELS.map((label, index) => <option key={label} value={index + 1}>{label}</option>)}
-                  </select>
-                </div>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Приём пищи</label>
-                  <select className="form-control" value={addItemMealType} onChange={(event) => setAddItemMealType(event.target.value)}>
-                    <option value="">— без приёма —</option>
-                    <option value="breakfast">🌅 Завтрак</option>
-                    <option value="lunch">☀️ Обед</option>
-                    <option value="dinner">🌙 Ужин</option>
-                  </select>
-                </div>
-              </div>
-
-              {allMembers.length ? (
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text-muted)', marginBottom: 6 }}>Назначение по членам семьи (необязательно)</div>
-                  {allMembers.map((member) => (
-                    <div key={member.id} className="member-assignment-row" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <span className="member-dot" style={{ background: member.color, width: 10, height: 10, borderRadius: '50%', flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, minWidth: 80 }}>{member.name}</span>
-                      <select
-                        className="form-control"
-                        style={{ flex: 1, fontSize: 13 }}
-                        value={pendingAssignments[member.id] || ''}
-                        onChange={(event) => setPendingAssignments((prev) => {
-                          const next = { ...prev }
-                          if (event.target.value) next[member.id] = Number(event.target.value)
-                          else delete next[member.id]
-                          return next
-                        })}
-                      >
-                        <option value="">— как у всех —</option>
-                        {allRecipes.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.title}</option>)}
-                      </select>
-                    </div>
-                  ))}
-                  <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginBottom: 14 }} onClick={() => addItem(null)}>+ Добавить назначения членам семьи</button>
-                  <hr className="divider" style={{ margin: '14px 0' }} />
-                </div>
-              ) : null}
-
-              <div className="form-group" style={{ marginBottom: 10 }}>
-                <label className="form-label">Общее блюдо для всей семьи</label>
-                <select className="form-control" value={selectedRecipeId} onChange={(event) => setSelectedRecipeId(event.target.value)}>
-                  <option value="">— выберите рецепт —</option>
-                  {allRecipes.map((recipe) => <option key={recipe.id} value={recipe.id}>{recipe.title}</option>)}
-                </select>
-              </div>
-              <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={() => {
+            <MenuAddPanel
+              currentWeek={currentWeek}
+              allMembers={allMembers}
+              allRecipes={allRecipes}
+              addItemDay={addItemDay}
+              addItemMealType={addItemMealType}
+              pendingAssignments={pendingAssignments}
+              selectedRecipeId={selectedRecipeId}
+              onAddDayChange={setAddItemDay}
+              onAddMealChange={setAddItemMealType}
+              onMemberAssignmentChange={(memberId, value) => setPendingAssignments((prev) => {
+                const next = { ...prev }
+                if (value) next[memberId] = Number(value)
+                else delete next[memberId]
+                return next
+              })}
+              onAddAssignmentsOnly={() => addItem(null)}
+              onSelectedRecipeChange={setSelectedRecipeId}
+              onAddSharedRecipe={() => {
                 const recipeId = Number(selectedRecipeId)
                 if (!recipeId) {
                   toast('Выберите рецепт из списка', 'error')
                   return
                 }
                 addItem(recipeId)
-              }}>+ Добавить общее блюдо</button>
-            </div>
+              }}
+            />
           ) : null}
         </>
       ) : null}
@@ -673,6 +534,8 @@ export function MenuPage({ active, toast, quickActions, setQuickActions }) {
     </div>
   )
 }
+
+
 
 
 

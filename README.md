@@ -122,16 +122,7 @@ family-kitchen-recipes/
 │   └── requirements.txt
 ├── frontend/
 │   ├── public/
-│   │   ├── legacy-index.html  # старая vanilla-версия, сохранена как reference
-│   │   └── js/
-│   │       ├── api.js
-│   │       ├── app.js
-│   │       ├── members.js
-│   │       ├── menu.js
-│   │       ├── recipes.js
-│   │       ├── settings.js
-│   │       ├── shopping.js
-│   │       └── warehouse.js
+│   │   └── favicon.svg
 │   ├── src/              # React SPA
 │   ├── index.html        # Vite entry
 │   ├── tests/
