@@ -1,14 +1,33 @@
+# Environment
 .env
+.env.local
+.env.*.local
+
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
 venv/
-.idea/
-node_modules/
+.pytest_cache/
 *.log
+
+# Frontend build
+frontend/dist/*
+frontend/node_modules/
+frontend/package-lock.json
+
+# Docker runtime data
 uploads/
 postgres_data/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Archives
 *.tar.gz
-frontend/package-lock.json
