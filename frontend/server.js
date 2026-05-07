@@ -4,6 +4,9 @@ const https = require('https');
 const path = require('path');
 const app = express();
 
+const DIST_DIR = path.join(__dirname, 'dist');
+const PORT = Number(process.env.PORT || 3000);
+
 const BACKEND_ORIGINS = process.env.BACKEND_ORIGIN
   ? [process.env.BACKEND_ORIGIN]
   : ['http://recipes-backend:8000', 'http://backend:8000'];
@@ -80,10 +83,10 @@ function proxyToBackend(req, res) {
 // Forward API and uploaded static files to backend instead of SPA fallback.
 app.use(['/api', '/uploads', '/documents'], proxyToBackend);
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(DIST_DIR));
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(DIST_DIR, 'index.html'));
 });
 
-app.listen(3000, () => console.log('Frontend running on port 3000'));
+app.listen(PORT, () => console.log(`Frontend running on port ${PORT}`));

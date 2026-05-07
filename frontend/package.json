@@ -4,16 +4,23 @@
   "description": "Family Recipes App",
   "main": "server.js",
   "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
     "start": "node server.js",
     "test": "vitest run --config vitest.config.mjs",
     "test:run": "vitest run --config vitest.config.mjs",
     "test:watch": "vitest --config vitest.config.mjs"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "jsdom": "^26.1.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.3.5",
     "vitest": "^3.2.4"
   }
 }

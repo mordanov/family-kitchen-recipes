@@ -4,7 +4,7 @@ Web-приложение для хранения семейных рецепто
 
 ## Стек
 - **Backend**: Python 3.12 + FastAPI + SQLAlchemy (async) + Alembic
-- **Frontend**: Vanilla JS + HTML/CSS (без фреймворков)
+- **Frontend**: React 18 + Vite + CSS
 - **База данных**: PostgreSQL 16
 - **Прокси**: Nginx
 - **Контейнеризация**: Docker + Docker Compose
@@ -122,7 +122,7 @@ family-kitchen-recipes/
 │   └── requirements.txt
 ├── frontend/
 │   ├── public/
-│   │   ├── index.html    # SPA приложение
+│   │   ├── legacy-index.html  # старая vanilla-версия, сохранена как reference
 │   │   └── js/
 │   │       ├── api.js
 │   │       ├── app.js
@@ -132,6 +132,8 @@ family-kitchen-recipes/
 │   │       ├── settings.js
 │   │       ├── shopping.js
 │   │       └── warehouse.js
+│   ├── src/              # React SPA
+│   ├── index.html        # Vite entry
 │   ├── tests/
 │   ├── server.js         # Express для статики
 │   ├── package.json
