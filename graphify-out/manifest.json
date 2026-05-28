@@ -1,0 +1,447 @@
+{
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/manage.sh": {
+    "mtime": 1773534817.0,
+    "ast_hash": "e1adc003104aca25518347337ee35136",
+    "semantic_hash": "e1adc003104aca25518347337ee35136"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/server.js": {
+    "mtime": 1778164935.1826837,
+    "ast_hash": "03db2230581eb82e7915916b173c6d29",
+    "semantic_hash": "03db2230581eb82e7915916b173c6d29"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/vite.config.js": {
+    "mtime": 1778164591.1698227,
+    "ast_hash": "93774405d8e722159cb088afca52ee51",
+    "semantic_hash": "93774405d8e722159cb088afca52ee51"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/package.json": {
+    "mtime": 1778163952.8711357,
+    "ast_hash": "5b792758f7377bcea60776bdc1034d45",
+    "semantic_hash": "5b792758f7377bcea60776bdc1034d45"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/vitest.config.mjs": {
+    "mtime": 1777728287.3861558,
+    "ast_hash": "ba244d5079118b25030328f3bf80f258",
+    "semantic_hash": "ba244d5079118b25030328f3bf80f258"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/tests/menu.test.js": {
+    "mtime": 1778165950.6387289,
+    "ast_hash": "d15e928ed2ab5c185b687324a0c87660",
+    "semantic_hash": "d15e928ed2ab5c185b687324a0c87660"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/tests/recipes.test.js": {
+    "mtime": 1778165882.5159407,
+    "ast_hash": "6d64b07b7f5086220204fecfc3140db8",
+    "semantic_hash": "6d64b07b7f5086220204fecfc3140db8"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/tests/shopping.test.js": {
+    "mtime": 1778165985.4358788,
+    "ast_hash": "1ce527757b516d7819c9396996236cf0",
+    "semantic_hash": "1ce527757b516d7819c9396996236cf0"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/tests/api.test.js": {
+    "mtime": 1778165769.7736146,
+    "ast_hash": "c8bf8d88c711f282cbaac5239f47d742",
+    "semantic_hash": "c8bf8d88c711f282cbaac5239f47d742"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/tests/app.test.js": {
+    "mtime": 1778166188.6490853,
+    "ast_hash": "6bf1d054c146d821968accc8ade23206",
+    "semantic_hash": "6bf1d054c146d821968accc8ade23206"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/tests/warehouse.test.js": {
+    "mtime": 1778166095.9004457,
+    "ast_hash": "89fb5a05a582c891c39501b2407a1e62",
+    "semantic_hash": "89fb5a05a582c891c39501b2407a1e62"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/tests/setup.js": {
+    "mtime": 1778166167.1841142,
+    "ast_hash": "7281cb0b26170ea1468969813f2611ca",
+    "semantic_hash": "7281cb0b26170ea1468969813f2611ca"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/tests/history.test.js": {
+    "mtime": 1778166014.6146054,
+    "ast_hash": "6634f2254690f38fe934dc17f7e312a4",
+    "semantic_hash": "6634f2254690f38fe934dc17f7e312a4"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/tests/helpers/renderReact.js": {
+    "mtime": 1778166997.7564118,
+    "ast_hash": "e4afac67ecb316adbe5354641755911b",
+    "semantic_hash": "e4afac67ecb316adbe5354641755911b"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/components.jsx": {
+    "mtime": 1778164018.181012,
+    "ast_hash": "503c4ef7d94bb37a4a05bd78c8164ea0",
+    "semantic_hash": "503c4ef7d94bb37a4a05bd78c8164ea0"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/main.jsx": {
+    "mtime": 1778164478.472906,
+    "ast_hash": "eb7105af3fb8c6f397f694ad02064946",
+    "semantic_hash": "eb7105af3fb8c6f397f694ad02064946"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/App.jsx": {
+    "mtime": 1778164706.234306,
+    "ast_hash": "d871eac21a47388deab3039d63fc6ce5",
+    "semantic_hash": "d871eac21a47388deab3039d63fc6ce5"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/utils.js": {
+    "mtime": 1778163975.0541952,
+    "ast_hash": "4583f2ca619f890091c09ec31a49c122",
+    "semantic_hash": "4583f2ca619f890091c09ec31a49c122"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/api.js": {
+    "mtime": 1778164000.3765378,
+    "ast_hash": "59eff38c1431a61297f587a2bb146980",
+    "semantic_hash": "59eff38c1431a61297f587a2bb146980"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/ShoppingPage.jsx": {
+    "mtime": 1778164212.2822385,
+    "ast_hash": "f9b1e0e5274afbe3e46346f47aa83ded",
+    "semantic_hash": "f9b1e0e5274afbe3e46346f47aa83ded"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/MenuPage.jsx": {
+    "mtime": 1778166915.6778522,
+    "ast_hash": "20fbcf5bfa39bd42005183893d3d1baa",
+    "semantic_hash": "20fbcf5bfa39bd42005183893d3d1baa"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/RecipesPage.jsx": {
+    "mtime": 1778165421.2131732,
+    "ast_hash": "5632f05713bc46e642584bc60dde1b05",
+    "semantic_hash": "5632f05713bc46e642584bc60dde1b05"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/SettingsPage.jsx": {
+    "mtime": 1778164341.7096508,
+    "ast_hash": "96b2839cb779393384441fa96d6978d2",
+    "semantic_hash": "96b2839cb779393384441fa96d6978d2"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/WarehousePage.jsx": {
+    "mtime": 1778166976.177789,
+    "ast_hash": "e1c7d8526e036832aeefc8f3e325fb68",
+    "semantic_hash": "e1c7d8526e036832aeefc8f3e325fb68"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/MembersPage.jsx": {
+    "mtime": 1778164413.5838766,
+    "ast_hash": "e05ae3d48aca1277d017aec205a7ed9b",
+    "semantic_hash": "e05ae3d48aca1277d017aec205a7ed9b"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/HistoryPage.jsx": {
+    "mtime": 1778164251.5386076,
+    "ast_hash": "6659d11e9538c7459af9dd0fdd59d5ff",
+    "semantic_hash": "6659d11e9538c7459af9dd0fdd59d5ff"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/recipes/RecipeDetailModal.jsx": {
+    "mtime": 1778165345.8128397,
+    "ast_hash": "d45f622e94724e033a6ad662ccd7640b",
+    "semantic_hash": "d45f622e94724e033a6ad662ccd7640b"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/recipes/RecipeFormModal.jsx": {
+    "mtime": 1778165327.2263575,
+    "ast_hash": "183a395686f33fba52ada273d789dec3",
+    "semantic_hash": "183a395686f33fba52ada273d789dec3"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/recipes/recipeForm.js": {
+    "mtime": 1778165270.302703,
+    "ast_hash": "948e1272bc98a155c72168f8508901e8",
+    "semantic_hash": "948e1272bc98a155c72168f8508901e8"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/recipes/RecipeCard.jsx": {
+    "mtime": 1778165298.053255,
+    "ast_hash": "0e69eb633c43025a6556533ba2ade1e7",
+    "semantic_hash": "0e69eb633c43025a6556533ba2ade1e7"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/recipes/RecipeMemberFeedback.jsx": {
+    "mtime": 1778165286.2389042,
+    "ast_hash": "5466f2a6c43e186dac06defa2b4b5e12",
+    "semantic_hash": "5466f2a6c43e186dac06defa2b4b5e12"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/menu/MenuStatusBanner.jsx": {
+    "mtime": 1778166763.027258,
+    "ast_hash": "39542e55cf5d25465337d9bb1ee50245",
+    "semantic_hash": "39542e55cf5d25465337d9bb1ee50245"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/menu/MenuAddPanel.jsx": {
+    "mtime": 1778166812.7518823,
+    "ast_hash": "0f41abe624c5566de255d12d8f2427d9",
+    "semantic_hash": "0f41abe624c5566de255d12d8f2427d9"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/menu/MenuItemsList.jsx": {
+    "mtime": 1778166798.8908517,
+    "ast_hash": "51018f86ae7c3201018b3d03958fc6dc",
+    "semantic_hash": "51018f86ae7c3201018b3d03958fc6dc"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/warehouse/WarehouseDrafts.jsx": {
+    "mtime": 1778166848.598663,
+    "ast_hash": "6ca91d906f1f939b3ce86010646d5abc",
+    "semantic_hash": "6ca91d906f1f939b3ce86010646d5abc"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/warehouse/WarehouseSection.jsx": {
+    "mtime": 1778166828.3836389,
+    "ast_hash": "71530b56af3e0f649ee5fc135d53418f",
+    "semantic_hash": "71530b56af3e0f649ee5fc135d53418f"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/src/pages/warehouse/WarehouseItemModals.jsx": {
+    "mtime": 1778166867.698066,
+    "ast_hash": "e1fec4368928958399f60df62fd27c8d",
+    "semantic_hash": "e1fec4368928958399f60df62fd27c8d"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/.claude/settings.local.json": {
+    "mtime": 1779347611.69614,
+    "ast_hash": "f9fd55c917be22ea2b90e2f319501e6e",
+    "semantic_hash": "f9fd55c917be22ea2b90e2f319501e6e"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/auth.py": {
+    "mtime": 1773691312.360982,
+    "ast_hash": "2ee608e734d87b3cc1dc29f5e9c5f091",
+    "semantic_hash": "2ee608e734d87b3cc1dc29f5e9c5f091"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/config.py": {
+    "mtime": 1775558928.1355622,
+    "ast_hash": "71e291e83ba322f2f1b896603abffe5e",
+    "semantic_hash": "71e291e83ba322f2f1b896603abffe5e"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/models.py": {
+    "mtime": 1775673770.151979,
+    "ast_hash": "7c920110d986a17b88a9fd3cf84f96a9",
+    "semantic_hash": "7c920110d986a17b88a9fd3cf84f96a9"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/database.py": {
+    "mtime": 1773533955.0,
+    "ast_hash": "abfc44e2bf543501b4997c8af9b8b9ff",
+    "semantic_hash": "abfc44e2bf543501b4997c8af9b8b9ff"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/__init__.py": {
+    "mtime": 1773534249.0,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/schemas.py": {
+    "mtime": 1775673787.5617454,
+    "ast_hash": "0fd90bafa086e4abad231032f48639a4",
+    "semantic_hash": "0fd90bafa086e4abad231032f48639a4"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/main.py": {
+    "mtime": 1775570465.0777943,
+    "ast_hash": "52c2a12068eb8ff37ef97bb7dcb5aebb",
+    "semantic_hash": "52c2a12068eb8ff37ef97bb7dcb5aebb"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/init_db.py": {
+    "mtime": 1775558936.925076,
+    "ast_hash": "04a811cf187d898f196bee1dc052266a",
+    "semantic_hash": "04a811cf187d898f196bee1dc052266a"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/api/auth.py": {
+    "mtime": 1773533994.0,
+    "ast_hash": "04b9f59535081437447106ad81c9f761",
+    "semantic_hash": "04b9f59535081437447106ad81c9f761"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/api/warehouse.py": {
+    "mtime": 1775682611.383066,
+    "ast_hash": "c8ed697e6cb0f60f20ca213a380f559a",
+    "semantic_hash": "c8ed697e6cb0f60f20ca213a380f559a"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/api/members.py": {
+    "mtime": 1774863515.0587409,
+    "ast_hash": "b413fa07559adc974c8aab92c50dff53",
+    "semantic_hash": "b413fa07559adc974c8aab92c50dff53"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/api/directories.py": {
+    "mtime": 1774906494.0082278,
+    "ast_hash": "f332ed7d6508675d950e22e79f7fde48",
+    "semantic_hash": "f332ed7d6508675d950e22e79f7fde48"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/api/__init__.py": {
+    "mtime": 1773534057.0,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/api/recipes.py": {
+    "mtime": 1774908516.3232763,
+    "ast_hash": "92d9a47f900325604326c7d49d66a7b1",
+    "semantic_hash": "92d9a47f900325604326c7d49d66a7b1"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/api/settings.py": {
+    "mtime": 1775520002.4104807,
+    "ast_hash": "e778ca5116a2c9adde704f54c6956306",
+    "semantic_hash": "e778ca5116a2c9adde704f54c6956306"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/api/menus.py": {
+    "mtime": 1774908524.514757,
+    "ast_hash": "a1173490cdfd1e349251f689269dfb21",
+    "semantic_hash": "a1173490cdfd1e349251f689269dfb21"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/services/__init__.py": {
+    "mtime": 1773534059.0,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/services/receipt_parser.py": {
+    "mtime": 1775682574.640765,
+    "ast_hash": "72c3b2dfcb31b34397edcff795ac8147",
+    "semantic_hash": "72c3b2dfcb31b34397edcff795ac8147"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/app/services/kbju.py": {
+    "mtime": 1774739138.7733188,
+    "ast_hash": "f525815d2100288c37b1605a41502f5c",
+    "semantic_hash": "f525815d2100288c37b1605a41502f5c"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/tests/conftest.py": {
+    "mtime": 1774908080.6394324,
+    "ast_hash": "2a69ca57e4cdcfdf5c5b44e16b0cc66d",
+    "semantic_hash": "2a69ca57e4cdcfdf5c5b44e16b0cc66d"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/tests/test_members.py": {
+    "mtime": 1774908299.8258374,
+    "ast_hash": "3e328c9ea879f58c511364eb2bd5da0f",
+    "semantic_hash": "3e328c9ea879f58c511364eb2bd5da0f"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/tests/test_auth.py": {
+    "mtime": 1773538245.4149282,
+    "ast_hash": "f82baa701ccc1a21ce597cf13c2701e3",
+    "semantic_hash": "f82baa701ccc1a21ce597cf13c2701e3"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/tests/test_menus.py": {
+    "mtime": 1774908265.023662,
+    "ast_hash": "3983c8a9f6a9b1561d7bc73b909fbf08",
+    "semantic_hash": "3983c8a9f6a9b1561d7bc73b909fbf08"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/tests/test_recipes.py": {
+    "mtime": 1774908149.278465,
+    "ast_hash": "8d9a3847c2ac62395136a7e16ae60c6f",
+    "semantic_hash": "8d9a3847c2ac62395136a7e16ae60c6f"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/tests/test_warehouse.py": {
+    "mtime": 1774908290.4018257,
+    "ast_hash": "102f6adb22eee41c96d49f62409464de",
+    "semantic_hash": "102f6adb22eee41c96d49f62409464de"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/tests/test_kbju.py": {
+    "mtime": 1774046216.1334143,
+    "ast_hash": "6d1cb50ef031f19e5ea6418c7d0425c7",
+    "semantic_hash": "6d1cb50ef031f19e5ea6418c7d0425c7"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/env.py": {
+    "mtime": 1773534269.0,
+    "ast_hash": "3a61156244c9301682fb696f2d10bcf6",
+    "semantic_hash": "3a61156244c9301682fb696f2d10bcf6"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0013_add_cooking_methods_sous_vide_sauce_grill.py": {
+    "mtime": 1774736354.4262142,
+    "ast_hash": "7f2f4faf110d937f78b94e9fa675a9cd",
+    "semantic_hash": "7f2f4faf110d937f78b94e9fa675a9cd"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0010_add_recipe_active_time_and_freezer.py": {
+    "mtime": 1774217888.431313,
+    "ast_hash": "55bf8c3c4589b4fd62b87dffda016acf",
+    "semantic_hash": "55bf8c3c4589b4fd62b87dffda016acf"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0004_add_added_on_to_warehouse.py": {
+    "mtime": 1773678206.8781233,
+    "ast_hash": "78779c6832dd8d3b9b16298b27818e1a",
+    "semantic_hash": "78779c6832dd8d3b9b16298b27818e1a"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0017_drop_cooking_method_column.py": {
+    "mtime": 1776036795.0972533,
+    "ast_hash": "f037a0f7c86488c0822f5f60cd45abce",
+    "semantic_hash": "f037a0f7c86488c0822f5f60cd45abce"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0016_add_receipt_drafts.py": {
+    "mtime": 1775673775.076504,
+    "ast_hash": "c8489102be9ebfd99055e72bea771702",
+    "semantic_hash": "c8489102be9ebfd99055e72bea771702"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0015_recipe_categories_and_cooking_methods_directory.py": {
+    "mtime": 1774781242.4884799,
+    "ast_hash": "a923db07a8467d97ef78872569d54cb0",
+    "semantic_hash": "a923db07a8467d97ef78872569d54cb0"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0009_add_recipe_cooking_time.py": {
+    "mtime": 1774215009.7513232,
+    "ast_hash": "a11cef7ef30ad3930d436cb90c07902d",
+    "semantic_hash": "a11cef7ef30ad3930d436cb90c07902d"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0014_alter_cooking_methods.py": {
+    "mtime": 1774739342.9679053,
+    "ast_hash": "3aa24960fa4feaea86bffda302effc26",
+    "semantic_hash": "3aa24960fa4feaea86bffda302effc26"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0005_add_family_members.py": {
+    "mtime": 1773678206.878304,
+    "ast_hash": "515b42d277e5eba2670e283e3e7ff240",
+    "semantic_hash": "515b42d277e5eba2670e283e3e7ff240"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0002_add_dry_frying.py": {
+    "mtime": 1773678206.8777819,
+    "ast_hash": "8ed1e3c1fc5a78c721eacc9ad0782aec",
+    "semantic_hash": "8ed1e3c1fc5a78c721eacc9ad0782aec"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0001_initial.py": {
+    "mtime": 1773534287.0,
+    "ast_hash": "350547a88c91c00db41b9d148a4b265d",
+    "semantic_hash": "350547a88c91c00db41b9d148a4b265d"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0003_add_warehouse.py": {
+    "mtime": 1773678206.8779511,
+    "ast_hash": "0c28a28513cc10c94258b1a81d302a9c",
+    "semantic_hash": "0c28a28513cc10c94258b1a81d302a9c"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0006_member_birth_date.py": {
+    "mtime": 1773678206.8784854,
+    "ast_hash": "3108d306371b8c3f0be39023078aa13f",
+    "semantic_hash": "3108d306371b8c3f0be39023078aa13f"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0007_menu_meal_slots.py": {
+    "mtime": 1773678400.3300471,
+    "ast_hash": "85f03a1a9378db03ef8de1b68631c4be",
+    "semantic_hash": "85f03a1a9378db03ef8de1b68631c4be"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0008_add_recipe_categories_and_text.py": {
+    "mtime": 1774736207.8085039,
+    "ast_hash": "e36b5855fb75da3eb15da16b60c86227",
+    "semantic_hash": "e36b5855fb75da3eb15da16b60c86227"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0012_add_recipe_additional_material_original_name.py": {
+    "mtime": 1774220573.981375,
+    "ast_hash": "0063cbf6f227ac44cc52bdfc6e95fbb4",
+    "semantic_hash": "0063cbf6f227ac44cc52bdfc6e95fbb4"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/alembic/versions/0011_add_recipe_additional_material.py": {
+    "mtime": 1774219489.9435475,
+    "ast_hash": "b2a382d5c6a3d32a4c08b1ac25f38226",
+    "semantic_hash": "b2a382d5c6a3d32a4c08b1ac25f38226"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/README.md": {
+    "mtime": 1778166213.5055048,
+    "ast_hash": "a6e24ca6edc5f9ad4e08adae53d5553c",
+    "semantic_hash": "a6e24ca6edc5f9ad4e08adae53d5553c"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/docker-compose.yml": {
+    "mtime": 1778169864.8897135,
+    "ast_hash": "49448449c0d0cc53a4da3b816229ea99",
+    "semantic_hash": "49448449c0d0cc53a4da3b816229ea99"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/index.html": {
+    "mtime": 1778164580.1659763,
+    "ast_hash": "ba7effc86b55644d60de57c8e9af0109",
+    "semantic_hash": "ba7effc86b55644d60de57c8e9af0109"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/backend/requirements.txt": {
+    "mtime": 1775682622.5810268,
+    "ast_hash": "f32cf06a92577c129ddea699db88319a",
+    "semantic_hash": "f32cf06a92577c129ddea699db88319a"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/.github/workflows/pr-main-tests.yml": {
+    "mtime": 1777728287.3747406,
+    "ast_hash": "e3128e52142e5f5f5e73bc1a3db3de5d",
+    "semantic_hash": "e3128e52142e5f5f5e73bc1a3db3de5d"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/.github/workflows/deploy-vps.yml": {
+    "mtime": 1777728287.374148,
+    "ast_hash": "e7b7b4b84f5b51ca9226e7b081c76460",
+    "semantic_hash": "e7b7b4b84f5b51ca9226e7b081c76460"
+  },
+  "/Users/aleksandr/Local/web-projects/family-kitchen-recipes/frontend/public/favicon.svg": {
+    "mtime": 1773920971.3017185,
+    "ast_hash": "3a519650f5ccccab542a25de6d9c8434",
+    "semantic_hash": "3a519650f5ccccab542a25de6d9c8434"
+  }
+}

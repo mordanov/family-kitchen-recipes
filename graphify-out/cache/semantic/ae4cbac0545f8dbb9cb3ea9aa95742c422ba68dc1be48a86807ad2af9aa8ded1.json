@@ -1,0 +1,1 @@
+{"nodes": [{"id": "versions_0001_initial_upgrade", "label": "Initial Schema: users, recipes, menus, menu_items, app_settings", "file_type": "code", "source_file": "backend/alembic/versions/0001_initial.py", "source_location": "upgrade()", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}
