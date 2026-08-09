@@ -15,8 +15,11 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
-    op.execute("UPDATE recipes SET cooking_method = 'other' WHERE cooking_method IN ('sous_vide', 'sauce', 'sweet_sauce', 'grill', 'waffles')")
+    # Cast to VARCHAR first so the UPDATE uses plain string comparison,
+    # avoiding asyncpg's UnsafeNewEnumValueUsageError on enum values that were
+    # added by the previous migration in the same connection session.
     op.execute("ALTER TABLE recipes ALTER COLUMN cooking_method TYPE VARCHAR(50)")
+    op.execute("UPDATE recipes SET cooking_method = 'other' WHERE cooking_method IN ('sauce', 'sweet_sauce', 'waffles')")
     op.execute("DROP TYPE cookingmethod")
     op.execute("CREATE TYPE cookingmethod AS ENUM ('boiling', 'frying', 'dry_frying', 'stewing', 'air_fryer', 'baking', 'raw', 'other', 'sous_vide', 'grill')")
     op.execute("ALTER TABLE recipes ALTER COLUMN cooking_method TYPE cookingmethod USING cooking_method::cookingmethod")

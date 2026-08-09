@@ -34,7 +34,11 @@ export function buildRecipeFormData(form) {
   }
   fd.append('freezer_friendly', String(Boolean(form.freezer_friendly)))
   fd.append('extra_info', form.extra_info || '')
-  if (form.imageFile) fd.append('image', form.imageFile)
+  if (form.imageFile) {
+    fd.append('image', form.imageFile)
+  } else if (!form.imagePreview) {
+    fd.append('remove_image', 'true')
+  }
   if (form.materialFile) fd.append('additional_material', form.materialFile)
   return fd
 }

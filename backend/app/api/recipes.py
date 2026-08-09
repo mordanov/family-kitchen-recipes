@@ -334,6 +334,7 @@ async def update_recipe(
     freezer_friendly: bool = Form(default=False),
     extra_info: str = Form(default=""),
     image: Optional[UploadFile] = File(default=None),
+    remove_image: str = Form(default=""),
     additional_material: Optional[UploadFile] = File(default=None),
     db: AsyncSession = Depends(get_db),
     _=Depends(get_current_user),
@@ -358,6 +359,11 @@ async def update_recipe(
             content = await image.read()
             await f.write(content)
         db_recipe.image_path = f"/uploads/{filename}"
+    elif remove_image == "true" and db_recipe.image_path:
+        old_path = "/app" + db_recipe.image_path
+        if os.path.exists(old_path):
+            os.remove(old_path)
+        db_recipe.image_path = None
 
     if additional_material and hasattr(additional_material, "filename") and additional_material.filename:
         _remove_additional_material_file(db_recipe.additional_material_path)

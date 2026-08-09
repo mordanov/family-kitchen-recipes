@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 import { api } from '../api'
 import { EmptyState, PageHeader, Spinner } from '../components'
-import { downloadBlob, readFileAsDataUrl } from '../utils'
+import { downloadBlob } from '../utils'
 import { RecipeCard } from './recipes/RecipeCard'
 import { RecipeDetailModal } from './recipes/RecipeDetailModal'
 import { RecipeFormModal } from './recipes/RecipeFormModal'
@@ -225,13 +225,6 @@ export function RecipesPage({ active, toast }) {
     }
   }
 
-  async function onImageChange(event) {
-    const file = event.target.files?.[0]
-    if (!file) return
-    const preview = await readFileAsDataUrl(file)
-    setForm((prev) => ({ ...prev, imageFile: file, imagePreview: preview }))
-  }
-
   function onDocumentChange(event) {
     const file = event.target.files?.[0]
     if (!file) {
@@ -313,7 +306,6 @@ export function RecipesPage({ active, toast }) {
         onClose={() => { setFormOpen(false); resetForm() }}
         onSave={saveRecipe}
         onChange={updateForm}
-        onImageChange={onImageChange}
         onDocumentChange={onDocumentChange}
       />
 
