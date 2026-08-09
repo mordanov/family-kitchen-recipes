@@ -133,6 +133,12 @@ export const api = {
   addDislikedRecipe: (memberId, recipeId) => request('POST', `/members/${memberId}/disliked/${recipeId}`),
   removeDislikedRecipe: (memberId, recipeId) => request('DELETE', `/members/${memberId}/disliked/${recipeId}`),
 
+  parseRecipeImages: (files) => {
+    const fd = new FormData()
+    files.forEach((file) => fd.append('images', file))
+    return request('POST', '/recipes/ocr', fd, true)
+  },
+
   getRecipeCategories: () => request('GET', '/directories/recipe-categories'),
   createRecipeCategory: (data) => request('POST', '/directories/recipe-categories', data),
   updateRecipeCategory: (id, data) => request('PUT', `/directories/recipe-categories/${id}`, data),

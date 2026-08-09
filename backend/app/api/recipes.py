@@ -278,6 +278,36 @@ async def create_recipe(
     return _build_recipe_out(recipe_obj, {})
 
 
+@router.post("/ocr")
+async def ocr_recipe(
+    images: List[UploadFile] = File(...),
+    _=Depends(get_current_user),
+):
+    """
+    Accept 1–10 recipe images, run OpenAI vision OCR, return parsed recipe fields.
+    Does NOT save anything to the database.
+    """
+    from app.services.recipe_ocr import parse_recipe_images
+
+    if not images or len(images) > 10:
+        raise HTTPException(status_code=422, detail="Нужно от 1 до 10 изображений")
+
+    image_data: list[tuple[bytes, str]] = []
+    for upload in images:
+        content = await upload.read()
+        ct = (upload.content_type or "image/jpeg").lower()
+        if not ct.startswith("image/"):
+            raise HTTPException(status_code=422, detail=f"Файл {upload.filename!r} не является изображением")
+        image_data.append((content, ct))
+
+    try:
+        result = await parse_recipe_images(image_data)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    return result
+
+
 @router.get("/{recipe_id}", response_model=RecipeOut)
 async def get_recipe(recipe_id: int, db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     result = await db.execute(select(Recipe).where(Recipe.id == recipe_id))

@@ -6,6 +6,7 @@ import { downloadBlob, readFileAsDataUrl } from '../utils'
 import { RecipeCard } from './recipes/RecipeCard'
 import { RecipeDetailModal } from './recipes/RecipeDetailModal'
 import { RecipeFormModal } from './recipes/RecipeFormModal'
+import { RecipeImportModal } from './recipes/RecipeImportModal'
 import { buildRecipeFormData, createEmptyRecipeForm, defaultRecipeForm } from './recipes/recipeForm'
 
 export function RecipesPage({ active, toast }) {
@@ -14,6 +15,7 @@ export function RecipesPage({ active, toast }) {
   const [loading, setLoading] = useState(false)
   const [detailRecipe, setDetailRecipe] = useState(null)
   const [formOpen, setFormOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [form, setForm] = useState(defaultRecipeForm)
   const [categories, setCategories] = useState([])
   const [methods, setMethods] = useState([])
@@ -101,6 +103,16 @@ export function RecipesPage({ active, toast }) {
 
   function openCreate() {
     resetForm()
+    setFormOpen(true)
+  }
+
+  function openImport() {
+    setImportOpen(true)
+  }
+
+  function onImported(prefilled) {
+    setImportOpen(false)
+    setForm(prefilled)
     setFormOpen(true)
   }
 
@@ -245,7 +257,12 @@ export function RecipesPage({ active, toast }) {
       <PageHeader
         title="Мои"
         accent="рецепты"
-        actions={<button className="btn btn-primary" onClick={openCreate}>+ Добавить рецепт</button>}
+        actions={(
+          <div className="btn-group">
+            <button className="btn btn-secondary" onClick={openImport}>📷 Из фото</button>
+            <button className="btn btn-primary" onClick={openCreate}>+ Вручную</button>
+          </div>
+        )}
       />
 
       <div className="search-bar">
@@ -264,7 +281,12 @@ export function RecipesPage({ active, toast }) {
           emoji="🍽️"
           title="Рецептов пока нет"
           description="Добавьте первый семейный рецепт!"
-          actions={<button className="btn btn-primary" onClick={openCreate}>+ Добавить рецепт</button>}
+          actions={(
+            <div className="btn-group">
+              <button className="btn btn-secondary" onClick={openImport}>📷 Из фото</button>
+              <button className="btn btn-primary" onClick={openCreate}>+ Вручную</button>
+            </div>
+          )}
         />
       ) : null}
       {!loading && recipes.length ? (
@@ -274,6 +296,14 @@ export function RecipesPage({ active, toast }) {
           ))}
         </div>
       ) : null}
+
+      <RecipeImportModal
+        open={importOpen}
+        methods={methods}
+        categories={categories}
+        onClose={() => setImportOpen(false)}
+        onImported={onImported}
+      />
 
       <RecipeFormModal
         open={formOpen}
