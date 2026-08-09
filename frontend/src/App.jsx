@@ -113,12 +113,12 @@ export default function App() {
             </div>
             {authError ? <div className="auth-error">{authError}</div> : null}
             <div className="form-group">
-              <label htmlFor="login-username">Имя пользователя</label>
-              <input id="login-username" type="text" value={authForm.username} autoComplete="username" onChange={(event) => setAuthForm((prev) => ({ ...prev, username: event.target.value }))} onKeyDown={(event) => event.key === 'Enter' && document.getElementById('login-password')?.focus()} />
+              <label className="form-label" htmlFor="login-username">Имя пользователя</label>
+              <input className="form-control" id="login-username" type="text" value={authForm.username} autoComplete="username" onChange={(event) => setAuthForm((prev) => ({ ...prev, username: event.target.value }))} onKeyDown={(event) => event.key === 'Enter' && document.getElementById('login-password')?.focus()} />
             </div>
             <div className="form-group">
-              <label htmlFor="login-password">Пароль</label>
-              <input id="login-password" type="password" value={authForm.password} autoComplete="current-password" onChange={(event) => setAuthForm((prev) => ({ ...prev, password: event.target.value }))} onKeyDown={(event) => event.key === 'Enter' && login()} />
+              <label className="form-label" htmlFor="login-password">Пароль</label>
+              <input className="form-control" id="login-password" type="password" value={authForm.password} autoComplete="current-password" onChange={(event) => setAuthForm((prev) => ({ ...prev, password: event.target.value }))} onKeyDown={(event) => event.key === 'Enter' && login()} />
             </div>
             <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={login}>Войти</button>
           </div>
