@@ -1,7 +1,7 @@
 """add is_dietary flag to recipes
 
-Revision ID: 0010
-Revises: 0009
+Revision ID: 0018
+Revises: 0017
 Create Date: 2026-08-19 00:00:00.000000
 
 """
@@ -10,8 +10,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "0010"
-down_revision: Union[str, None] = "0009"
+revision: str = "0018"
+down_revision: Union[str, None] = "0017"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
