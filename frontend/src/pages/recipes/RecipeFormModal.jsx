@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 
 import { ConfirmOverlay, Modal, TimeInput } from '../../components'
 import { ImageCropModal } from './ImageCropModal'
+import { RecipeImageSearchModal } from './RecipeImageSearchModal'
 
 function CategoryCombobox({ categories, selectedIds, onChange, onAddCategory }) {
   const [open, setOpen] = useState(false)
@@ -98,9 +99,11 @@ export function RecipeFormModal({
   onImageChange,
   onDocumentChange,
   onAddCategory,
+  onImageFromUrl,
 }) {
   const [cropSrc, setCropSrc] = useState(null)
   const [confirmClose, setConfirmClose] = useState(false)
+  const [imageSearchOpen, setImageSearchOpen] = useState(false)
   const isDirtyRef = useRef(false)
 
   useEffect(() => {
@@ -143,6 +146,15 @@ export function RecipeFormModal({
 
   function openCropExisting() {
     setCropSrc(form.imagePreview)
+  }
+
+  async function handleImageSearchSelect(url) {
+    setImageSearchOpen(false)
+    if (form.id) {
+      await onImageFromUrl(url)
+    } else {
+      handleChange({ imagePreview: url, imageUrl: url })
+    }
   }
 
   return (
@@ -239,15 +251,28 @@ export function RecipeFormModal({
                   Заменить
                 </label>
                 <button className="btn btn-secondary btn-sm" onClick={openCropExisting}>✂ Обрезать</button>
-                <button className="btn btn-sm" style={{ background: '#fff0f0', color: '#c0392b', border: '1.5px solid #ffc9cf' }} onClick={() => handleChange({ imageFile: null, imagePreview: '' })}>✕</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => setImageSearchOpen(true)}>🔍 Найти</button>
+                <button className="btn btn-sm" style={{ background: '#fff0f0', color: '#c0392b', border: '1.5px solid #ffc9cf' }} onClick={() => handleChange({ imageFile: null, imagePreview: '', imageUrl: '' })}>✕</button>
               </div>
             </div>
           ) : (
-            <label className="image-upload-area" style={{ cursor: 'pointer' }}>
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageSelect} />
-              <div style={{ fontSize: 32 }}>📷</div>
-              <div style={{ fontWeight: 700, marginTop: 8 }}>Нажмите или перетащите фото</div>
-            </label>
+            <div>
+              <label className="image-upload-area" style={{ cursor: 'pointer', marginBottom: 8 }}>
+                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageSelect} />
+                <div style={{ fontSize: 32 }}>📷</div>
+                <div style={{ fontWeight: 700, marginTop: 8 }}>Нажмите или перетащите фото</div>
+              </label>
+              {form.title && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ width: '100%' }}
+                  onClick={() => setImageSearchOpen(true)}
+                >
+                  🔍 Найти фото в интернете
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -276,6 +301,13 @@ export function RecipeFormModal({
         message="Изменения не сохранены. Закрыть форму и потерять данные?"
         onCancel={() => setConfirmClose(false)}
         onConfirm={confirmAndClose}
+      />
+
+      <RecipeImageSearchModal
+        open={imageSearchOpen}
+        recipeTitle={form.title}
+        onClose={() => setImageSearchOpen(false)}
+        onSelect={handleImageSearchSelect}
       />
     </>
   )

@@ -133,6 +133,9 @@ export const api = {
   addDislikedRecipe: (memberId, recipeId) => request('POST', `/members/${memberId}/disliked/${recipeId}`),
   removeDislikedRecipe: (memberId, recipeId) => request('DELETE', `/members/${memberId}/disliked/${recipeId}`),
 
+  searchRecipeImages: (q) => request('GET', `/recipes/image-search?q=${encodeURIComponent(q)}`),
+  setImageFromUrl: (id, url) => request('POST', `/recipes/${id}/image-from-url`, { url }),
+
   parseRecipeImages: (files) => {
     const fd = new FormData()
     files.forEach((file) => fd.append('images', file))

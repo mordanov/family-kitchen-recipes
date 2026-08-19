@@ -26,6 +26,8 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       SECRET_KEY: ${SECRET_KEY:-super-secret-key-change-in-production}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GOOGLE_CSE_ID: ${GOOGLE_CSE_ID:-}
       USER1_NAME: ${USER1_NAME}
       USER1_PASSWORD: ${USER1_PASSWORD}
       USER2_NAME: ${USER2_NAME}

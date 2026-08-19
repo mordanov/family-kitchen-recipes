@@ -12,6 +12,7 @@ export const defaultRecipeForm = {
   freezer_friendly: false,
   categories: [],
   imageFile: null,
+  imageUrl: '',
   materialFile: null,
   imagePreview: '',
   additionalMaterialName: '',
@@ -36,6 +37,8 @@ export function buildRecipeFormData(form) {
   fd.append('extra_info', form.extra_info || '')
   if (form.imageFile) {
     fd.append('image', form.imageFile)
+  } else if (form.imageUrl) {
+    fd.append('image_url', form.imageUrl)
   } else if (!form.imagePreview) {
     fd.append('remove_image', 'true')
   }

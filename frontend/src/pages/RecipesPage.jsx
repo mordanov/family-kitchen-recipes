@@ -251,6 +251,16 @@ export function RecipesPage({ active, toast }) {
     setForm((prev) => ({ ...prev, categories: [...prev.categories, String(created.id)] }))
   }
 
+  async function imageFromUrl(url) {
+    try {
+      const updated = await api.setImageFromUrl(form.id, url)
+      updateForm({ imagePreview: updated.image_path, imageUrl: '' })
+    } catch (error) {
+      toast(`Ошибка загрузки изображения: ${error.message}`, 'error')
+      throw error
+    }
+  }
+
   return (
     <div className={`page ${active ? 'active' : ''}`}>
       <PageHeader
@@ -314,6 +324,7 @@ export function RecipesPage({ active, toast }) {
         onChange={updateForm}
         onDocumentChange={onDocumentChange}
         onAddCategory={addCategory}
+        onImageFromUrl={imageFromUrl}
       />
 
       <RecipeDetailModal

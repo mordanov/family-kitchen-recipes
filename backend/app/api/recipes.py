@@ -1,8 +1,13 @@
+import asyncio
+import ipaddress
 import os
+import socket
 import uuid
 from collections import defaultdict
 from typing import List, Optional
-from pydantic import ValidationError
+from urllib.parse import urlparse
+from pydantic import BaseModel, ValidationError
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -137,6 +142,52 @@ async def _resolve_cooking_method(db: AsyncSession, method_id: Optional[int]) ->
     return method
 
 
+class ImageFromUrlRequest(BaseModel):
+    url: str
+
+
+async def _download_image_from_url(url: str) -> str:
+    """Download an image from a URL, save to UPLOAD_DIR, return /uploads/<filename> path."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(status_code=422, detail="Поддерживаются только HTTP/HTTPS URL")
+    hostname = parsed.hostname
+    if not hostname:
+        raise HTTPException(status_code=422, detail="Некорректный URL")
+
+    try:
+        resolved = await asyncio.to_thread(socket.gethostbyname, hostname)
+        ip = ipaddress.ip_address(resolved)
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+            raise HTTPException(status_code=422, detail="Недопустимый URL")
+    except (socket.gaierror, ValueError):
+        raise HTTPException(status_code=422, detail="Не удалось разрешить хост")
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            resp = await client.get(url)
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=503, detail="Не удалось загрузить изображение") from exc
+
+    if resp.status_code != 200:
+        raise HTTPException(status_code=503, detail="Не удалось загрузить изображение")
+
+    content_type = resp.headers.get("content-type", "").lower().split(";")[0].strip()
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=422, detail="URL не является изображением")
+
+    ext_map = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif"}
+    ext = ext_map.get(content_type, ".jpg")
+
+    filename = f"{uuid.uuid4()}{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    async with aiofiles.open(filepath, "wb") as f:
+        await f.write(resp.content)
+
+    return f"/uploads/{filename}"
+
+
 async def run_kbju_calculation(recipe_id: int, db_url: str):
     """Background task to calculate KBJU after recipe save. Retries up to 3 times."""
     import asyncio
@@ -215,6 +266,7 @@ async def create_recipe(
     freezer_friendly: bool = Form(default=False),
     extra_info: str = Form(default=""),
     image: Optional[UploadFile] = File(default=None),
+    image_url: Optional[str] = Form(default=None),
     additional_material: Optional[UploadFile] = File(default=None),
     db: AsyncSession = Depends(get_db),
     _=Depends(get_current_user),
@@ -234,6 +286,8 @@ async def create_recipe(
             content = await image.read()
             await f.write(content)
         image_path = f"/uploads/{filename}"
+    elif image_url:
+        image_path = await _download_image_from_url(image_url)
 
     if additional_material and hasattr(additional_material, "filename") and additional_material.filename:
         additional_material_path, additional_material_original_name = await _save_pdf_upload(additional_material)
@@ -308,6 +362,65 @@ async def ocr_recipe(
     return result
 
 
+@router.get("/image-search")
+async def search_images(q: str, _=Depends(get_current_user)):
+    from app.config import settings
+    if not settings.GOOGLE_API_KEY or not settings.GOOGLE_CSE_ID:
+        raise HTTPException(status_code=503, detail="Поиск изображений не настроен")
+
+    params = {
+        "key": settings.GOOGLE_API_KEY,
+        "cx": settings.GOOGLE_CSE_ID,
+        "q": q,
+        "searchType": "image",
+        "num": 4,
+        "safe": "active",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get("https://www.googleapis.com/customsearch/v1", params=params)
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=503, detail="Ошибка сервиса поиска") from exc
+
+    if resp.status_code != 200:
+        raise HTTPException(status_code=503, detail="Ошибка сервиса поиска изображений")
+
+    items = resp.json().get("items", [])
+    return [
+        {
+            "url": item.get("link", ""),
+            "thumbnail": item.get("image", {}).get("thumbnailLink", item.get("link", "")),
+            "title": item.get("title", ""),
+        }
+        for item in items
+    ]
+
+
+@router.post("/{recipe_id}/image-from-url", response_model=RecipeOut)
+async def image_from_url(
+    recipe_id: int,
+    body: ImageFromUrlRequest,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+):
+    result = await db.execute(select(Recipe).where(Recipe.id == recipe_id))
+    recipe = result.scalar_one_or_none()
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    if recipe.image_path:
+        old_path = "/app" + recipe.image_path
+        if os.path.exists(old_path):
+            os.remove(old_path)
+
+    recipe.image_path = await _download_image_from_url(body.url)
+    await db.commit()
+    await db.refresh(recipe)
+
+    feedback_by_recipe = await _collect_feedback_by_recipe(db)
+    return _build_recipe_out(recipe, feedback_by_recipe)
+
+
 @router.get("/{recipe_id}", response_model=RecipeOut)
 async def get_recipe(recipe_id: int, db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     result = await db.execute(select(Recipe).where(Recipe.id == recipe_id))
@@ -334,6 +447,7 @@ async def update_recipe(
     freezer_friendly: bool = Form(default=False),
     extra_info: str = Form(default=""),
     image: Optional[UploadFile] = File(default=None),
+    image_url: Optional[str] = Form(default=None),
     remove_image: str = Form(default=""),
     additional_material: Optional[UploadFile] = File(default=None),
     db: AsyncSession = Depends(get_db),
@@ -359,6 +473,12 @@ async def update_recipe(
             content = await image.read()
             await f.write(content)
         db_recipe.image_path = f"/uploads/{filename}"
+    elif image_url:
+        if db_recipe.image_path:
+            old_path = "/app" + db_recipe.image_path
+            if os.path.exists(old_path):
+                os.remove(old_path)
+        db_recipe.image_path = await _download_image_from_url(image_url)
     elif remove_image == "true" and db_recipe.image_path:
         old_path = "/app" + db_recipe.image_path
         if os.path.exists(old_path):
