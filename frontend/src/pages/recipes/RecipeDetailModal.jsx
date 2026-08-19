@@ -1,7 +1,7 @@
 import React from 'react'
 
 import { Badge, Modal } from '../../components'
-import { cookingMethodLabel, formatDate, getRecipeEmoji } from '../../utils'
+import { cookingMethodLabel, formatDate, formatMinutes, getRecipeEmoji } from '../../utils'
 import { RecipeMemberFeedback } from './RecipeMemberFeedback'
 
 export function RecipeDetailModal({
@@ -37,8 +37,8 @@ export function RecipeDetailModal({
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <Badge className="badge-primary">{cookingMethodLabel(recipe.cooking_method)}</Badge>
                 <Badge>{recipe.servings} порций</Badge>
-                {Number.isFinite(recipe.cooking_time_minutes) ? <Badge>⏱ Общее время: {recipe.cooking_time_minutes} мин</Badge> : null}
-                {Number.isFinite(recipe.active_cooking_time_minutes) ? <Badge>🔥 Активное время: {recipe.active_cooking_time_minutes} мин</Badge> : null}
+                {Number.isFinite(recipe.cooking_time_minutes) ? <Badge>⏱ Общее время: {formatMinutes(recipe.cooking_time_minutes)}</Badge> : null}
+                {Number.isFinite(recipe.active_cooking_time_minutes) ? <Badge>🔥 Активное время: {formatMinutes(recipe.active_cooking_time_minutes)}</Badge> : null}
                 <Badge>{recipe.freezer_friendly ? '❄️ Подходит для морозильной камеры' : '🧊 Не для морозильной камеры'}</Badge>
                 <Badge style={{ fontSize: 11, color: 'var(--c-text-muted)' }}>Обновлён: {formatDate(recipe.updated_at)}</Badge>
               </div>

@@ -245,6 +245,12 @@ export function RecipesPage({ active, toast }) {
     setForm((prev) => ({ ...prev, ...patch }))
   }
 
+  async function addCategory(name) {
+    const created = await api.createRecipeCategory({ name })
+    setCategories((prev) => [...prev, created])
+    setForm((prev) => ({ ...prev, categories: [...prev.categories, String(created.id)] }))
+  }
+
   return (
     <div className={`page ${active ? 'active' : ''}`}>
       <PageHeader
@@ -307,6 +313,7 @@ export function RecipesPage({ active, toast }) {
         onSave={saveRecipe}
         onChange={updateForm}
         onDocumentChange={onDocumentChange}
+        onAddCategory={addCategory}
       />
 
       <RecipeDetailModal

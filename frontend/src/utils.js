@@ -184,3 +184,13 @@ export function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+export function formatMinutes(totalMinutes) {
+  const n = Number(totalMinutes)
+  if (!n || n <= 0) return '—'
+  const h = Math.floor(n / 60)
+  const m = n % 60
+  if (h === 0) return `${m} мин`
+  if (m === 0) return `${h} ч`
+  return `${h} ч ${m} мин`
+}
+

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 export function Spinner() {
   return <div className="spinner" />
@@ -64,6 +64,40 @@ export function ToastContainer({ toasts, onRemove }) {
           <button className="toast-close" onClick={() => onRemove(toast.id)}>✕</button>
         </div>
       ))}
+    </div>
+  )
+}
+
+export function TimeInput({ value, onChange }) {
+  const total = (value === '' || value === null || value === undefined) ? 0 : Number(value)
+  const hours = Math.floor(total / 60)
+  const minutes = total % 60
+
+  function update(h, m) {
+    const newTotal = h * 60 + m
+    onChange(newTotal === 0 ? '' : newTotal)
+  }
+
+  return (
+    <div className="time-input">
+      <input
+        type="number"
+        min="0"
+        max="99"
+        className="form-control time-part"
+        value={hours}
+        onChange={(e) => update(Math.max(0, Math.min(99, Number(e.target.value) || 0)), minutes)}
+      />
+      <span className="time-sep">ч</span>
+      <input
+        type="number"
+        min="0"
+        max="59"
+        className="form-control time-part"
+        value={minutes}
+        onChange={(e) => update(hours, Math.max(0, Math.min(59, Number(e.target.value) || 0)))}
+      />
+      <span className="time-sep">мин</span>
     </div>
   )
 }
