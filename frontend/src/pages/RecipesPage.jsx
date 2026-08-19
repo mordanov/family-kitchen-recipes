@@ -129,6 +129,7 @@ export function RecipesPage({ active, toast }) {
       shopping_list: recipe.shopping_list || '',
       extra_info: recipe.extra_info || '',
       freezer_friendly: Boolean(recipe.freezer_friendly),
+      is_dietary: Boolean(recipe.is_dietary),
       categories: (recipe.categories || []).map((name) => String(categories.find((item) => item.name === name)?.id || name)).filter(Boolean),
       imageFile: null,
       materialFile: null,

@@ -10,6 +10,7 @@ export const defaultRecipeForm = {
   shopping_list: '',
   extra_info: '',
   freezer_friendly: false,
+  is_dietary: false,
   categories: [],
   imageFile: null,
   imageUrl: '',
@@ -34,6 +35,7 @@ export function buildRecipeFormData(form) {
     fd.append('cooking_time_minutes', String(form.cooking_time_minutes).trim())
   }
   fd.append('freezer_friendly', String(Boolean(form.freezer_friendly)))
+  fd.append('is_dietary', String(Boolean(form.is_dietary)))
   fd.append('extra_info', form.extra_info || '')
   if (form.imageFile) {
     fd.append('image', form.imageFile)

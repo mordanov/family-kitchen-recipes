@@ -66,6 +66,7 @@ class RecipeBase(BaseModel):
     cooking_time_minutes: Optional[int] = Field(default=None, ge=1, le=1440)
     active_cooking_time_minutes: Optional[int] = Field(default=None, ge=1, le=1440)
     freezer_friendly: bool = False
+    is_dietary: bool = False
     additional_material_path: Optional[str] = None
     additional_material_original_name: Optional[str] = None
     extra_info: Optional[str] = None
@@ -109,6 +110,7 @@ class RecipeOut(BaseModel):
     cooking_time_minutes: Optional[int] = None
     active_cooking_time_minutes: Optional[int] = None
     freezer_friendly: bool = False
+    is_dietary: bool = False
     additional_material_path: Optional[str] = None
     additional_material_original_name: Optional[str] = None
     extra_info: Optional[str] = None

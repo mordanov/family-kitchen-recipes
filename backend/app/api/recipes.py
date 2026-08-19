@@ -264,6 +264,7 @@ async def create_recipe(
     cooking_time_minutes: Optional[int] = Form(default=None),
     active_cooking_time_minutes: Optional[int] = Form(default=None),
     freezer_friendly: bool = Form(default=False),
+    is_dietary: bool = Form(default=False),
     extra_info: str = Form(default=""),
     image: Optional[UploadFile] = File(default=None),
     image_url: Optional[str] = Form(default=None),
@@ -302,6 +303,7 @@ async def create_recipe(
             "cooking_time_minutes": cooking_time_minutes,
             "active_cooking_time_minutes": active_cooking_time_minutes,
             "freezer_friendly": freezer_friendly,
+            "is_dietary": is_dietary,
             "extra_info": extra_info,
         }
     )
@@ -317,6 +319,7 @@ async def create_recipe(
         cooking_time_minutes=payload.cooking_time_minutes,
         active_cooking_time_minutes=payload.active_cooking_time_minutes,
         freezer_friendly=payload.freezer_friendly,
+        is_dietary=payload.is_dietary,
         additional_material_path=additional_material_path,
         additional_material_original_name=additional_material_original_name,
         extra_info=payload.extra_info if payload.extra_info else None,
@@ -440,6 +443,7 @@ async def update_recipe(
     cooking_time_minutes: Optional[int] = Form(default=None),
     active_cooking_time_minutes: Optional[int] = Form(default=None),
     freezer_friendly: bool = Form(default=False),
+    is_dietary: bool = Form(default=False),
     extra_info: str = Form(default=""),
     image: Optional[UploadFile] = File(default=None),
     image_url: Optional[str] = Form(default=None),
@@ -497,6 +501,7 @@ async def update_recipe(
             "cooking_time_minutes": cooking_time_minutes,
             "active_cooking_time_minutes": active_cooking_time_minutes,
             "freezer_friendly": freezer_friendly,
+            "is_dietary": is_dietary,
             "extra_info": extra_info,
         }
     )
@@ -511,6 +516,7 @@ async def update_recipe(
     db_recipe.cooking_time_minutes = payload.cooking_time_minutes
     db_recipe.active_cooking_time_minutes = payload.active_cooking_time_minutes
     db_recipe.freezer_friendly = payload.freezer_friendly
+    db_recipe.is_dietary = payload.is_dietary
     db_recipe.extra_info = payload.extra_info if payload.extra_info else None
     db_recipe.kbju_calculated = False  # Reset, will recalculate
 

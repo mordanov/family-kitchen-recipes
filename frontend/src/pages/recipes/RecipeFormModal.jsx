@@ -211,15 +211,28 @@ export function RecipeFormModal({
           </div>
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Заготовка для морозильной камеры</label>
-          <div className="checkbox-group">
-            <label className="checkbox-option">
-              <input type="checkbox" checked={form.freezer_friendly} onChange={() => handleChange({ freezer_friendly: true })} /> Да
-            </label>
-            <label className="checkbox-option">
-              <input type="checkbox" checked={!form.freezer_friendly} onChange={() => handleChange({ freezer_friendly: false })} /> Нет
-            </label>
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">Заготовка для морозильной камеры</label>
+            <div className="checkbox-group">
+              <label className="checkbox-option">
+                <input type="checkbox" checked={form.freezer_friendly} onChange={() => handleChange({ freezer_friendly: true })} /> Да
+              </label>
+              <label className="checkbox-option">
+                <input type="checkbox" checked={!form.freezer_friendly} onChange={() => handleChange({ freezer_friendly: false })} /> Нет
+              </label>
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Диетическое питание</label>
+            <div className="checkbox-group">
+              <label className="checkbox-option">
+                <input type="checkbox" checked={form.is_dietary} onChange={() => handleChange({ is_dietary: true })} /> Да
+              </label>
+              <label className="checkbox-option">
+                <input type="checkbox" checked={!form.is_dietary} onChange={() => handleChange({ is_dietary: false })} /> Нет
+              </label>
+            </div>
           </div>
         </div>
 
