@@ -365,34 +365,29 @@ async def ocr_recipe(
 @router.get("/image-search")
 async def search_images(q: str, _=Depends(get_current_user)):
     from app.config import settings
-    if not settings.GOOGLE_API_KEY or not settings.GOOGLE_CSE_ID:
+    if not settings.UNSPLASH_API_KEY:
         raise HTTPException(status_code=503, detail="Поиск изображений не настроен")
 
-    params = {
-        "key": settings.GOOGLE_API_KEY,
-        "cx": settings.GOOGLE_CSE_ID,
-        "q": q,
-        "searchType": "image",
-        "num": 4,
-        "safe": "active",
-    }
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get("https://www.googleapis.com/customsearch/v1", params=params)
+            resp = await client.get(
+                "https://api.unsplash.com/search/photos",
+                params={"query": q, "per_page": 4, "orientation": "landscape"},
+                headers={"Authorization": f"Client-ID {settings.UNSPLASH_API_KEY}"},
+            )
     except httpx.RequestError as exc:
         raise HTTPException(status_code=503, detail="Ошибка сервиса поиска") from exc
 
     if resp.status_code != 200:
         raise HTTPException(status_code=503, detail="Ошибка сервиса поиска изображений")
 
-    items = resp.json().get("items", [])
     return [
         {
-            "url": item.get("link", ""),
-            "thumbnail": item.get("image", {}).get("thumbnailLink", item.get("link", "")),
-            "title": item.get("title", ""),
+            "url": item["urls"]["regular"],
+            "thumbnail": item["urls"]["small"],
+            "title": item.get("alt_description") or item.get("description") or "",
         }
-        for item in items
+        for item in resp.json().get("results", [])
     ]
 
 

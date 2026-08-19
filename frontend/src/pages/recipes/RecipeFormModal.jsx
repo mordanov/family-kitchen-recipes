@@ -253,13 +253,10 @@ export function RecipeFormModal({
                 <button className="btn btn-secondary btn-sm" onClick={openCropExisting}>✂ Обрезать</button>
                 <button className="btn btn-sm" style={{ background: '#fff0f0', color: '#c0392b', border: '1.5px solid #ffc9cf' }} onClick={() => handleChange({ imageFile: null, imagePreview: '', imageUrl: '' })}>✕</button>
               </div>
-              <button type="button" className="btn btn-secondary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => setImageSearchOpen(true)}>
-                🔍 Найти другое фото
-              </button>
             </div>
           ) : (
             <div>
-              <label className="image-upload-area" style={{ cursor: 'pointer', marginBottom: 8 }}>
+              <label className="image-upload-area" style={{ display: 'block', cursor: 'pointer', marginBottom: 8 }}>
                 <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageSelect} />
                 <div style={{ fontSize: 32 }}>📷</div>
                 <div style={{ fontWeight: 700, marginTop: 8 }}>Нажмите или перетащите фото</div>
