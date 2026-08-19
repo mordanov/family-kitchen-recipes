@@ -251,9 +251,11 @@ export function RecipeFormModal({
                   Заменить
                 </label>
                 <button className="btn btn-secondary btn-sm" onClick={openCropExisting}>✂ Обрезать</button>
-                <button className="btn btn-secondary btn-sm" onClick={() => setImageSearchOpen(true)}>🔍 Найти</button>
                 <button className="btn btn-sm" style={{ background: '#fff0f0', color: '#c0392b', border: '1.5px solid #ffc9cf' }} onClick={() => handleChange({ imageFile: null, imagePreview: '', imageUrl: '' })}>✕</button>
               </div>
+              <button type="button" className="btn btn-secondary btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => setImageSearchOpen(true)}>
+                🔍 Найти другое фото
+              </button>
             </div>
           ) : (
             <div>
