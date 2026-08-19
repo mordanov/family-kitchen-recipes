@@ -303,7 +303,7 @@ async def create_recipe(
             "cooking_time_minutes": cooking_time_minutes,
             "active_cooking_time_minutes": active_cooking_time_minutes,
             "freezer_friendly": freezer_friendly,
-            "is_dietary": is_dietary,
+            "is_dietary": is_dietary if isinstance(is_dietary, bool) else False,
             "extra_info": extra_info,
         }
     )
@@ -501,7 +501,7 @@ async def update_recipe(
             "cooking_time_minutes": cooking_time_minutes,
             "active_cooking_time_minutes": active_cooking_time_minutes,
             "freezer_friendly": freezer_friendly,
-            "is_dietary": is_dietary,
+            "is_dietary": is_dietary if isinstance(is_dietary, bool) else False,
             "extra_info": extra_info,
         }
     )
