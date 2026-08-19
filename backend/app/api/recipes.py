@@ -286,7 +286,7 @@ async def create_recipe(
             content = await image.read()
             await f.write(content)
         image_path = f"/uploads/{filename}"
-    elif image_url:
+    elif isinstance(image_url, str) and image_url:
         image_path = await _download_image_from_url(image_url)
 
     if additional_material and hasattr(additional_material, "filename") and additional_material.filename:
@@ -473,7 +473,7 @@ async def update_recipe(
             content = await image.read()
             await f.write(content)
         db_recipe.image_path = f"/uploads/{filename}"
-    elif image_url:
+    elif isinstance(image_url, str) and image_url:
         if db_recipe.image_path:
             old_path = "/app" + db_recipe.image_path
             if os.path.exists(old_path):
