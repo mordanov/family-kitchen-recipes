@@ -11,7 +11,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import selectinload
 import aiofiles
 
@@ -243,11 +243,10 @@ async def list_recipes(
     search: Optional[str] = None,
 ):
     if search:
-        ts_query = func.plainto_tsquery('russian', search)
         query = (
             select(Recipe)
-            .where(Recipe.search_vector.op('@@')(ts_query))
-            .order_by(func.ts_rank(Recipe.search_vector, ts_query).desc())
+            .where(text("search_vector @@ plainto_tsquery('russian', :q)").bindparams(q=search))
+            .order_by(text("ts_rank(search_vector, plainto_tsquery('russian', :q)) DESC").bindparams(q=search))
         )
     else:
         query = select(Recipe).order_by(Recipe.updated_at.desc())
