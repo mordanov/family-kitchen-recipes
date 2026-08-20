@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, Date, ForeignKey, Enum as SAEnum, Table, JSON
+from sqlalchemy import Column, Integer, String, Text, Float, Boolean, DateTime, Date, ForeignKey, Enum as SAEnum, Table, JSON, Computed
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import relationship
 from datetime import datetime, date, UTC
 import enum
@@ -103,6 +104,17 @@ class Recipe(Base):
     active_cooking_time_minutes = Column(Integer, nullable=True)
     freezer_friendly = Column(Boolean, nullable=False, default=False)
     is_dietary = Column(Boolean, nullable=False, default=False)
+    search_vector = Column(
+        TSVECTOR,
+        Computed(
+            "to_tsvector('russian',"
+            " coalesce(title, '') || ' ' ||"
+            " coalesce(ingredients, '') || ' ' ||"
+            " coalesce(recipe, ''))",
+            persisted=True,
+        ),
+        nullable=True,
+    )
     additional_material_path = Column(String(500), nullable=True)
     additional_material_original_name = Column(String(255), nullable=True)
     extra_info = Column(Text, nullable=True)

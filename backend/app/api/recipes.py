@@ -11,7 +11,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 import aiofiles
 
@@ -242,9 +242,15 @@ async def list_recipes(
     _=Depends(get_current_user),
     search: Optional[str] = None,
 ):
-    query = select(Recipe).order_by(Recipe.updated_at.desc())
     if search:
-        query = query.where(Recipe.title.ilike(f"%{search}%"))
+        ts_query = func.plainto_tsquery('russian', search)
+        query = (
+            select(Recipe)
+            .where(Recipe.search_vector.op('@@')(ts_query))
+            .order_by(func.ts_rank(Recipe.search_vector, ts_query).desc())
+        )
+    else:
+        query = select(Recipe).order_by(Recipe.updated_at.desc())
     result = await db.execute(query)
     recipes = result.scalars().all()
     feedback_by_recipe = await _collect_feedback_by_recipe(db)
