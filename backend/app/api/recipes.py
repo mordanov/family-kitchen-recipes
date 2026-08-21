@@ -370,6 +370,35 @@ async def ocr_recipe(
     return result
 
 
+@router.post("/ocr-pdf")
+async def ocr_recipe_pdf(
+    pdf: UploadFile = File(...),
+    _=Depends(get_current_user),
+):
+    """
+    Accept a PDF file, render pages as images, run OpenAI vision OCR.
+    Does NOT save anything to the database.
+    """
+    from app.services.recipe_pdf import parse_recipe_pdf
+
+    content_type = (pdf.content_type or "").lower()
+    filename = (pdf.filename or "").lower()
+    allowed_types = {"application/pdf", "application/x-pdf", "binary/octet-stream", "application/octet-stream"}
+    if content_type not in allowed_types and not filename.endswith(".pdf"):
+        raise HTTPException(status_code=422, detail="Нужно загрузить PDF-файл")
+
+    pdf_bytes = await pdf.read()
+    if not pdf_bytes:
+        raise HTTPException(status_code=422, detail="Файл пуст")
+
+    try:
+        result = await parse_recipe_pdf(pdf_bytes)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    return result
+
+
 @router.get("/image-search")
 async def search_images(q: str, _=Depends(get_current_user)):
     from app.config import settings

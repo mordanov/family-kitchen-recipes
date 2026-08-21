@@ -7,6 +7,7 @@ import { RecipeCard } from './recipes/RecipeCard'
 import { RecipeDetailModal } from './recipes/RecipeDetailModal'
 import { RecipeFormModal } from './recipes/RecipeFormModal'
 import { RecipeImportModal } from './recipes/RecipeImportModal'
+import { RecipePdfImportModal } from './recipes/RecipePdfImportModal'
 import { buildRecipeFormData, createEmptyRecipeForm, defaultRecipeForm } from './recipes/recipeForm'
 
 export function RecipesPage({ active, toast }) {
@@ -16,6 +17,7 @@ export function RecipesPage({ active, toast }) {
   const [detailRecipe, setDetailRecipe] = useState(null)
   const [formOpen, setFormOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [importPdfOpen, setImportPdfOpen] = useState(false)
   const [form, setForm] = useState(defaultRecipeForm)
   const [categories, setCategories] = useState([])
   const [methods, setMethods] = useState([])
@@ -110,8 +112,13 @@ export function RecipesPage({ active, toast }) {
     setImportOpen(true)
   }
 
+  function openImportPdf() {
+    setImportPdfOpen(true)
+  }
+
   function onImported(prefilled) {
     setImportOpen(false)
+    setImportPdfOpen(false)
     setForm(prefilled)
     setFormOpen(true)
   }
@@ -270,6 +277,7 @@ export function RecipesPage({ active, toast }) {
         actions={(
           <div className="btn-group">
             <button className="btn btn-secondary" onClick={openImport}>📷 Из фото</button>
+            <button className="btn btn-secondary" onClick={openImportPdf}>📄 Из pdf</button>
             <button className="btn btn-primary" onClick={openCreate}>+ Вручную</button>
           </div>
         )}
@@ -294,6 +302,7 @@ export function RecipesPage({ active, toast }) {
           actions={(
             <div className="btn-group">
               <button className="btn btn-secondary" onClick={openImport}>📷 Из фото</button>
+              <button className="btn btn-secondary" onClick={openImportPdf}>📄 Из pdf</button>
               <button className="btn btn-primary" onClick={openCreate}>+ Вручную</button>
             </div>
           )}
@@ -312,6 +321,14 @@ export function RecipesPage({ active, toast }) {
         methods={methods}
         categories={categories}
         onClose={() => setImportOpen(false)}
+        onImported={onImported}
+      />
+
+      <RecipePdfImportModal
+        open={importPdfOpen}
+        methods={methods}
+        categories={categories}
+        onClose={() => setImportPdfOpen(false)}
         onImported={onImported}
       />
 

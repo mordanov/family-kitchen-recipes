@@ -142,6 +142,12 @@ export const api = {
     return request('POST', '/recipes/ocr', fd, true)
   },
 
+  parseRecipePdf: (file) => {
+    const fd = new FormData()
+    fd.append('pdf', file)
+    return request('POST', '/recipes/ocr-pdf', fd, true)
+  },
+
   getRecipeCategories: () => request('GET', '/directories/recipe-categories'),
   createRecipeCategory: (data) => request('POST', '/directories/recipe-categories', data),
   updateRecipeCategory: (id, data) => request('PUT', `/directories/recipe-categories/${id}`, data),
