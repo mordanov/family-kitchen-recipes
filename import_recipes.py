@@ -3,7 +3,7 @@
 import_recipes.py — Bulk-import recipes from a PDF cookbook into the app.
 
 Requirements (all already installed in the backend Docker container):
-    PyMuPDF, openai, httpx
+    PyMuPDF, openai, requests
 
 Usage:
     python import_recipes.py \
@@ -31,7 +31,7 @@ import time
 from pathlib import Path
 
 import fitz            # PyMuPDF
-import httpx
+import requests
 from openai import OpenAI
 
 logging.basicConfig(
@@ -174,21 +174,21 @@ def parse_recipe(client: OpenAI, title: str, content: str, section: str) -> dict
 # ── API helpers ────────────────────────────────────────────────────────────────
 
 def api_login(base: str, username: str, password: str) -> str:
-    r = httpx.post(f"{base}/api/auth/login",
+    r = requests.post(f"{base}/api/auth/login",
                    json={"username": username, "password": password}, timeout=15)
     r.raise_for_status()
     return r.json()["access_token"]
 
 
 def api_categories(base: str, token: str) -> dict[str, int]:
-    r = httpx.get(f"{base}/api/directories/recipe-categories",
+    r = requests.get(f"{base}/api/directories/recipe-categories",
                   headers={"Authorization": f"Bearer {token}"}, timeout=15)
     r.raise_for_status()
     return {c["name"].lower(): c["id"] for c in r.json() if not c.get("is_deleted")}
 
 
 def api_methods(base: str, token: str) -> dict[str, int]:
-    r = httpx.get(f"{base}/api/directories/cooking-methods",
+    r = requests.get(f"{base}/api/directories/cooking-methods",
                   headers={"Authorization": f"Bearer {token}"}, timeout=15)
     r.raise_for_status()
     return {m["name"].lower(): m["id"] for m in r.json() if not m.get("is_deleted")}
@@ -215,36 +215,54 @@ def api_create_recipe(
     image_bytes: bytes | None,
 ) -> int:
     """POST /api/recipes/ and return the new recipe id."""
+    # Clamp servings to 1-50 (API validates ge=1, le=50)
+    servings = max(1, min(50, int(parsed.get("servings") or 4)))
+
+    # Clamp active time to not exceed total time (API validator rejects active > total)
+    cooking_time = parsed.get("cooking_time_minutes")
+    active_time = parsed.get("active_cooking_time_minutes")
+    if cooking_time and active_time and active_time > cooking_time:
+        active_time = cooking_time
+
     form = [
         ("title",           parsed.get("title") or "Без названия"),
-        ("ingredients",     parsed.get("ingredients") or ""),
+        ("ingredients",     parsed.get("ingredients") or "—"),  # min_length=1
         ("recipe",          parsed.get("recipe_text") or ""),
         ("shopping_list",   parsed.get("ingredients") or ""),
         ("extra_info",      ""),
-        ("servings",        str(parsed.get("servings") or 4)),
+        ("servings",        str(servings)),
         ("freezer_friendly","false"),
         ("is_dietary",      "false"),
         ("categories",      str(category_id)),
     ]
-    if parsed.get("cooking_time_minutes"):
-        form.append(("cooking_time_minutes", str(parsed["cooking_time_minutes"])))
-    if parsed.get("active_cooking_time_minutes"):
-        form.append(("active_cooking_time_minutes", str(parsed["active_cooking_time_minutes"])))
+    if cooking_time:
+        form.append(("cooking_time_minutes", str(cooking_time)))
+    if active_time:
+        form.append(("active_cooking_time_minutes", str(active_time)))
     if method_id:
         form.append(("cooking_method", str(method_id)))
 
     files = {}
     if image_bytes:
-        files["image"] = ("cover.jpg", image_bytes, "image/jpeg")
+        files["image"] = ("cover.jpg", io.BytesIO(image_bytes), "image/jpeg")
 
-    r = httpx.post(
+    r = requests.post(
         f"{base}/api/recipes/",
         headers={"Authorization": f"Bearer {token}"},
         data=form,
         files=files or None,
         timeout=30,
     )
-    r.raise_for_status()
+    if not r.ok:
+        detail = ""
+        try:
+            detail = r.json().get("detail", "")
+        except Exception:
+            pass
+        raise requests.HTTPError(
+            f"HTTP {r.status_code} {r.reason}: {detail or r.text[:200]}",
+            response=r,
+        )
     return r.json()["id"]
 
 
@@ -320,7 +338,11 @@ def main() -> None:
             # 1. Extract text from content pages
             content = extract_content_text(doc, recipe["cover_idx"], recipe["last_content_idx"])
             if not content.strip():
-                raise ValueError("No text extracted from content pages")
+                # Single-page recipe: all text is on the cover page itself
+                content = doc[recipe["cover_idx"]].get_text().strip()
+                if not content.strip():
+                    raise ValueError("No text found on cover or content pages")
+                log.warning("       No content pages — using cover page text as content")
 
             # 2. Parse with GPT-4o-mini
             parsed = parse_recipe(oai, recipe["title"], content, recipe["section"])
